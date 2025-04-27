@@ -1,6 +1,7 @@
 from src.Constants import *
 from src.Special_Ball import Bonus
 from src.ui.button import Button
+import random
 
 BONUS_IMAGES = {
     Bonus.Pause: {
@@ -64,6 +65,13 @@ class UiManager:
     def __init__(self, screen, level):
         self.screen = screen
         self.level = level
+
+         # 加载草地图片
+        self.load_grass_images()
+        # 随机生成草地位置
+        self.generate_grass_positions(count=10)
+        # 初始化草地更新计时器
+        self.grass_update_timer = pygame.time.get_ticks()
 
         self.start_game_btn = Button('Start', SCREEN_CENTER)
         self.start_game_display = Display(buttons=[self.start_game_btn])
@@ -135,3 +143,60 @@ class UiManager:
                                               label.y_start, label.width,
                                               label.height))
         self.screen.blit(label.text, (label.x_start, label.y_start))
+
+    def load_grass_images(self):
+        """
+        加载草地图片。
+        """
+        self.grass_images = [
+            pygame.image.load("assets/images/grass1.png"),
+            pygame.image.load("assets/images/grass2.png"),
+            pygame.image.load("assets/images/grass3.png"),
+            pygame.image.load("assets/images/grass4.png")
+        ]
+
+    def generate_grass_positions(self, count: int):
+        """
+        随机生成草地的位置。
+
+        :param count: 草地的数量
+        """
+        self.grass_positions = []
+        for _ in range(count):
+            x = random.randint(0, WIDTH - 50)  # 随机生成 x 坐标
+            y = random.randint(0, HEIGHT - 50)  # 随机生成 y 坐标
+            self.grass_positions.append((x, y))
+
+    def update_grass(self):
+        """
+        更新草地的位置和图片。
+        """
+        current_time = pygame.time.get_ticks()
+        # 每 1000 毫秒更新一次草地
+        if current_time - self.grass_update_timer > 2000:
+            self.grass_update_timer = current_time
+            self.generate_grass_positions(count=10)  # 重新生成位置
+
+    def draw_grass(self):
+        """
+        绘制草地。
+        """
+        for position in self.grass_positions:
+            grass_image = random.choice(self.grass_images)  # 随机选择草地图片
+            self.screen.blit(grass_image, position)
+
+    def draw_window(self, window: Display):
+        """
+        绘制窗口。
+
+        :param window: 显示对象
+        """
+        self.screen.fill(window.background_color)
+        self.update_grass()  # 更新草地位置
+        self.draw_grass()  # 绘制草地
+        for button in window.buttons:
+            self.draw_button(button)
+        for label in window.labels:
+            self.put_label(label)
+        for sprite in window.spites:
+            sprite.draw(self.screen)
