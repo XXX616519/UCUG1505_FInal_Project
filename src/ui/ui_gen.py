@@ -72,11 +72,13 @@ class UiManager:
         self.screen = screen
         self.level = level
 
-         # 加载草地图片
+        # 先初始化按钮
+        self.pause_btn = Button('Pause', (WIDTH-60, 40), small=True)
+        self.restart_btn = Button('Restart', (60, 40), small=True)
+
+        # 再初始化其他组件
         self.load_grass_images()
-        # 随机生成草地位置
         self.generate_grass_positions(count=10)
-        # 初始化草地更新计时器
         self.grass_update_timer = pygame.time.get_ticks()
 
         self.start_game_btn = Button('Start', SCREEN_CENTER)
@@ -86,8 +88,12 @@ class UiManager:
                                    (WIDTH // 2, 40))
         sprites = [level.player, level.path, level.ball_generator,
                    level.finish, level.shooting_manager]
-        self.game_display = Display(sprites=[sprite for sprite in sprites],
-                                    labels=[self.level_label])
+        # 现在可以正确引用pause_btn和restart_btn
+        self.game_display = Display(
+            sprites=[sprite for sprite in sprites],
+            labels=[self.level_label],
+            buttons=[self.pause_btn, self.restart_btn]
+        )
 
         self.continue_btn = Button('Continue', SCREEN_CENTER)
         self.win_level_display = Display(buttons=[self.continue_btn])

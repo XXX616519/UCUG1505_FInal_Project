@@ -21,6 +21,7 @@ class Game:
         self.score_manager = Score()
         self.setup_new_game()
         self.is_quit = False
+        self.is_paused = False
 
     def play(self):
         self.continue_game(self.ui_manager.start_game_btn,
@@ -47,9 +48,18 @@ class Game:
                 if event.type == pygame.QUIT:
                     self.is_quit = True
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    self.level.shooting_manager.shoot(pygame.mouse.get_pos())
+                    mouse_pos = pygame.mouse.get_pos()
+                    if self.ui_manager.pause_btn.rect.collidepoint(mouse_pos):
+                        self.is_paused = not self.is_paused
+                    elif self.ui_manager.restart_btn.rect.collidepoint(mouse_pos):
+                        self.setup_new_game()
+                        self.score_manager.setup_next_level()
+                    else:
+                        self.level.shooting_manager.shoot(mouse_pos)
 
-            self.update_sprites()
+            if not self.is_paused:
+                self.update_sprites()
+                
             self.update_display(self.ui_manager.game_display)
 
             if self.score_manager.is_win:
