@@ -79,6 +79,9 @@ class Shoot:
                             self.ball_generator.get_available_colors() and \
                             len(self.ball_generator.balls) != 0:
                         self.charged_ball = self.recharge()
+
+                    # 消除时重置计时
+                    self.score_manager.last_pop_time = datetime.datetime.now()
                 else:
                     # 如果球链长度小于等于 1，则插入射击球
                     ball_index = self.ball_generator.balls.index(ball)

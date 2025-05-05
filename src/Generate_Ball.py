@@ -7,7 +7,8 @@ import datetime
 class Generate_Ball(Basic_Ball):
     def __init__(self, path, number, score_manager):
         super().__init__(path, number, score_manager)
-        self.speed_factor = 1  # 初始化速度因子
+        self.speed_factor = SPEED_NORMAL  # 使用常量初始化
+        self.speed_boost_end = None  # 加速结束时间
 
     def generate(self):
         if self.number_of_generated < self.number_to_generate:
@@ -27,8 +28,16 @@ class Generate_Ball(Basic_Ball):
                     self.balls[i].can_move = True
 
     def update_balls(self):
-        # 保持速度因子但移除对间距的影响
-        self.speed_factor = 0.5 if self.slow_down else 1
+        # 检查是否需要恢复普通速度
+        if self.speed_boost_end and datetime.datetime.now() > self.speed_boost_end:
+            self.speed_factor = SPEED_NORMAL
+            self.speed_boost_end = None
+            
+        # 更新速度因子
+        if self.score_manager.check_speed_boost():
+            self.speed_factor = SPEED_FAST
+            if not self.speed_boost_end:  # 首次触发时设置结束时间
+                self.speed_boost_end = datetime.datetime.now() + datetime.timedelta(seconds=3)
         
         # 设置每个球的 prev_ball 属性为下一球，限制前端球的移动
         for idx, ball in enumerate(self.balls):
