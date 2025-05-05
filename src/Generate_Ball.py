@@ -20,7 +20,7 @@ class Generate_Ball(Basic_Ball):
 
     def move_stopped_ball(self, i):
         if not self.balls[i].can_move:
-            # 只有当后面的球足够接近时才唤醒
+            # 只有当后面的球足够接近时才唤醒（等待后段汇合）
             if i > 0 and self.balls[i-1].can_move:
                 distance = self.balls[i].pos_in_path - self.balls[i-1].pos_in_path
                 if distance <= 20:
@@ -92,8 +92,17 @@ class Generate_Ball(Basic_Ball):
         return ball
 
     def destroy(self, chain):
+        # Remove specified balls and freeze head segment until back segment catches up
+        # Determine the start index of the removed segment in original list
+        indices = sorted(self.balls.index(ball) for ball in chain)
+        start = indices[0] if indices else len(self.balls)
+        # Remove the eliminated balls
         for ball in chain:
-            self.balls.remove(ball)
+            if ball in self.balls:
+                self.balls.remove(ball)
+        # Freeze head segment (balls after the removal) until back segment catches up
+        for i in range(start, len(self.balls)):
+            self.balls[i].can_move = False
 
     def join_balls(self, index):
         # 保持自然移动速度
@@ -108,14 +117,12 @@ class Generate_Ball(Basic_Ball):
 
     def stop_balls(self, tail_index):
         # 修改停止逻辑：停止后面的球直到间距恢复
-        for i in range(tail_index, len(self.balls)):
-            if i == 0:
+        for idx in range(tail_index, len(self.balls)):
+            if idx == 0:
                 continue
-            # 计算与前一个球的间距
-            gap = self.balls[i].pos_in_path - self.balls[i-1].pos_in_path
+            gap = self.balls[idx].pos_in_path - self.balls[idx-1].pos_in_path
             if gap > 20:
-                # 停止当前及之后的所有球
-                for j in range(i, len(self.balls)):
+                for j in range(idx, len(self.balls)):
                     self.balls[j].can_move = False
                 break
 
