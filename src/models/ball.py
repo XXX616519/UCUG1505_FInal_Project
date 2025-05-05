@@ -15,6 +15,8 @@ class Basic_Ball:
 
         self.reverse = False
         self.pause = False
+        self.slow_down = False
+        self.speed_factor = 1
 
     def generate(self):
         if self.number_of_generated < self.number_to_generate:

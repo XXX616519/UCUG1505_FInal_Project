@@ -7,6 +7,8 @@ import datetime
 class Generate_Ball(Basic_Ball):
     def __init__(self, path, number, score_manager):
         super().__init__(path, number, score_manager)
+        self.speed_factor = 1  # 初始化速度因子
+
     def generate(self):
         if self.number_of_generated < self.number_to_generate:
             if len(self.balls) == 0 or \
@@ -18,22 +20,34 @@ class Generate_Ball(Basic_Ball):
 
     def move_stopped_ball(self, i):
         if not self.balls[i].can_move:
-            if i == 0:
-                self.balls[i].can_move = True
-
-            elif self.balls[i - 1].can_move and \
-                    self.balls[i - 1].rect.colliderect(self.balls[i].rect):
-                self.balls[i].can_move = True
+            # 只有当后面的球足够接近时才唤醒
+            if i > 0 and self.balls[i-1].can_move:
+                distance = self.balls[i].pos_in_path - self.balls[i-1].pos_in_path
+                if distance <= 20:
+                    self.balls[i].can_move = True
 
     def update_balls(self):
+        # 保持速度因子但移除对间距的影响
+        self.speed_factor = 0.5 if self.slow_down else 1
+        
+        # 设置每个球的 prev_ball 属性为下一球，限制前端球的移动
+        for idx, ball in enumerate(self.balls):
+            if idx < len(self.balls) - 1:
+                ball.prev_ball = self.balls[idx + 1]
+            else:
+                ball.prev_ball = None
+        
         for i in range(len(self.balls)):
-            self.balls[i].update()
+            if self.balls[i].can_move:
+                # 仅影响移动速度，不影响位置计算
+                self.balls[i].move(1 * self.speed_factor)
             self.move_stopped_ball(i)
 
     def update_chain(self):
         for i in range(1, len(self.balls)):
             left_ball = self.balls[i - 1]
             right_ball = self.balls[i]
+            # 恢复固定间距判断（移除速度因子影响）
             if right_ball.pos_in_path - left_ball.pos_in_path > 20:
                 if left_ball.color == right_ball.color:
                     self.join_balls(i - 1)
@@ -41,12 +55,19 @@ class Generate_Ball(Basic_Ball):
                     self.stop_balls(i)
 
     def update(self):
+        # 设置每个球的 prev_ball 属性，用于在 move 中限制和 join 时正确关联
+        for idx, ball in enumerate(self.balls):
+            if idx > 0:
+                ball.prev_ball = self.balls[idx-1]
+            else:
+                ball.prev_ball = None
         self.update_chain()
         if not self.reverse and not self.pause:
             self.update_balls()
         if len(self.balls) == 0 and self.number_of_generated == \
                 self.number_to_generate:
             self.score_manager.win()
+        
 
     def draw(self, screen):
         for ball in self.balls:
@@ -75,12 +96,28 @@ class Generate_Ball(Basic_Ball):
             self.balls.remove(ball)
 
     def join_balls(self, index):
-        for i in range(index, len(self.balls)):
-            self.balls[i].set_position(self.count_next_pos(i - 1))
+        # 保持自然移动速度
+        target_pos = self.count_next_pos(index)
+        for i in range(index + 1, len(self.balls)):
+            if self.balls[i].pos_in_path < target_pos:
+                # 使用基础速度移动（不受速度因子影响）
+                self.balls[i].move(1)
+            else:
+                break
+            target_pos = self.count_next_pos(i)
 
     def stop_balls(self, tail_index):
+        # 修改停止逻辑：停止后面的球直到间距恢复
         for i in range(tail_index, len(self.balls)):
-            self.balls[i].can_move = False
+            if i == 0:
+                continue
+            # 计算与前一个球的间距
+            gap = self.balls[i].pos_in_path - self.balls[i-1].pos_in_path
+            if gap > 20:
+                # 停止当前及之后的所有球
+                for j in range(i, len(self.balls)):
+                    self.balls[j].can_move = False
+                break
 
     def count_next_pos(self, index):
         return self.balls[index].pos_in_path + 2 * BALL_RADIUS // self.path.step

@@ -28,6 +28,12 @@ BONUS_IMAGES = {
         BLUE: 'assets/images/speed_blue.png',
         RED: 'assets/images/speed_red.png',
     },
+    Bonus.InstantWin: {
+        YELLOW: 'assets/images/instant_win_yellow.png',
+        GREEN: 'assets/images/instant_win_green.png',
+        BLUE: 'assets/images/instant_win_blue.png',
+        RED: 'assets/images/instant_win_red.png',
+    },
 }
 
 

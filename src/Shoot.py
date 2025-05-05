@@ -106,6 +106,8 @@ class Shoot:
                 elif ball.bonus is Bonus.Speed:
                     self.speed = True
                     self.bonus_manager.start_bonus(ball.bonus)
+                elif ball.bonus is Bonus.InstantWin:
+                    self.score_manager.win()
                 else:
                     self.bonus_manager.start_bonus(ball.bonus)
         return []

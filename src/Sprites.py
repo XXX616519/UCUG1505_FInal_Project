@@ -9,10 +9,10 @@ class Ball(pygame.sprite.Sprite):
         self.color = color
 
         self.path = path
-        self.pos_in_path = pos_in_path
+        self.pos_in_path = float(pos_in_path)
 
         self.image = pygame.Surface(BALL_SIZE)
-        self.pos = self.path.positions[self.pos_in_path]
+        self.pos = self.path.positions[int(self.pos_in_path)]
         self.rect = self.image.get_rect(center=(round(self.pos.x),
                                                 round(self.pos.y)))
 
@@ -24,7 +24,7 @@ class Ball(pygame.sprite.Sprite):
 
     def set_position(self, pos_in_path):
         self.pos_in_path = pos_in_path
-        self.pos = self.path.positions[self.pos_in_path]
+        self.pos = self.path.positions[int(self.pos_in_path)]
         self.rect.center = (round(self.pos.x), round(self.pos.y))
 
     def update(self):
@@ -32,11 +32,15 @@ class Ball(pygame.sprite.Sprite):
             self.move(1)
 
     def move(self, steps):
-        self.pos_in_path += steps
-        if self.pos_in_path >= 0:
-            self.pos = pygame.math.Vector2(
-                self.path.positions[self.pos_in_path])
-            self.rect.center = (round(self.pos.x), round(self.pos.y))
+        if self.can_move:
+            max_position = float('inf')
+            if hasattr(self, 'prev_ball') and self.prev_ball is not None:
+                max_position = self.prev_ball.pos_in_path + 20
+            self.pos_in_path = min(self.pos_in_path + steps, max_position)
+            if self.pos_in_path >= 0:
+                new_index = min(int(self.pos_in_path), len(self.path.positions)-1)
+                self.pos = pygame.math.Vector2(self.path.positions[new_index])
+                self.rect.center = (round(self.pos.x), round(self.pos.y))
 
     def draw(self, screen):
         pygame.draw.circle(screen, self.color, self.rect.center, BALL_RADIUS)
