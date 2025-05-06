@@ -12,10 +12,12 @@ from src.ui import *
 class Level:
     def __init__(self, number, score_manager):
         self.number = number
+        self.score_manager = score_manager
         self.path = Path(number)
         self.ball_generator = Generate_Ball(self.path, number * 50, score_manager)
         self.bonus_manager = Special_Ball(self.ball_generator)
         self.player = Player(number)
         self.finish = Finish(self.path, self.ball_generator.balls, score_manager)
-        self.shooting_manager = Shoot(self.ball_generator, self.player.pos, self.bonus_manager, score_manager)
+        # self.shooting_manager = Shoot(self.ball_generator, self.player.pos, self.bonus_manager, score_manager)
+        self.shooting_manager = Shoot(self.ball_generator, self.player, self.bonus_manager, self.score_manager)
 

@@ -2,38 +2,92 @@ from src.Sprites import ShootingBall
 from src.Constants import * 
 from src.Special_Ball import Bonus
 import random
+import math
 import datetime
 
 
 class Shoot:
-    def __init__(self, ball_generator, pos, bonus_manager, score_manager):
+    # def __init__(self, ball_generator, pos, bonus_manager, score_manager):
+    #     self.ball_generator = ball_generator
+    #     self.bonus_manager = bonus_manager
+    #     self.score_manager = score_manager
+
+    #     self.pos = pos
+    #     self.charged_ball = ShootingBall(random.choice(
+    #         self.ball_generator.colors), self.pos)
+
+    #     self.shooting_balls = []
+
+    #     self.combo_chain = []
+
+    #     self.speed = False
+
+    #     # 加载声音和图片
+    #     self.explosion_sound = pygame.mixer.Sound("assets/sounds/explosion.wav")
+    #     self.smoke_image = pygame.image.load("assets/images/smoke.png")
+
+    def __init__(self, ball_generator, player, bonus_manager, score_manager):
         self.ball_generator = ball_generator
+        self.player = player  # 现在接收整个player对象
         self.bonus_manager = bonus_manager
         self.score_manager = score_manager
 
-        self.pos = pos
+        # 使用player的get_shoot_pos方法获取初始位置
         self.charged_ball = ShootingBall(random.choice(
-            self.ball_generator.colors), self.pos)
-
+            self.ball_generator.colors), self.player.get_shoot_pos())
+        
         self.shooting_balls = []
-
         self.combo_chain = []
-
         self.speed = False
 
         # 加载声音和图片
         self.explosion_sound = pygame.mixer.Sound("assets/sounds/explosion.wav")
         self.smoke_image = pygame.image.load("assets/images/smoke.png")
 
+    # def shoot(self, target):
+    #     if len(self.shooting_balls) == 0 or self.speed or \
+    #             (datetime.datetime.now() -
+    #              self.shooting_balls[-1].time).microseconds > 300000:
+    #         shooting_ball = self.charged_ball
+    #         shooting_ball.set_target(target)
+    #         shooting_ball.set_time(datetime.datetime.now())
+    #         self.charged_ball = self.recharge()
+    #         self.shooting_balls.append(shooting_ball)
+
     def shoot(self, target):
+        """射击方法target可以是角度(手势)或鼠标坐标"""
         if len(self.shooting_balls) == 0 or self.speed or \
                 (datetime.datetime.now() -
                  self.shooting_balls[-1].time).microseconds > 300000:
+            
+            # 更新射击球位置
             shooting_ball = self.charged_ball
-            shooting_ball.set_target(target)
+            shooting_ball.pos = self.player.get_shoot_pos()
+            
+            # 根据target类型设置目标
+            if isinstance(target, (int, float)):  # 手势控制的角度
+                angle_rad = math.radians(target)
+                direction = (math.cos(angle_rad), math.sin(angle_rad))
+                # 设置目标点为屏幕外的一个点(沿方向延伸)
+                target_point = (
+                    shooting_ball.pos[0] + direction[0] * 1000,
+                    shooting_ball.pos[1] + direction[1] * 1000
+                )
+                shooting_ball.set_target(target_point)
+            else:  # 鼠标点击坐标
+                shooting_ball.set_target(target)
+            
             shooting_ball.set_time(datetime.datetime.now())
             self.charged_ball = self.recharge()
             self.shooting_balls.append(shooting_ball)
+
+    # def recharge(self):
+    #     # 过滤掉黑色，同时保留原始颜色选项
+    #     available_colors = [
+    #         color for color in self.ball_generator.get_available_colors() 
+    #         if color != BLACK
+    #     ] or self.ball_generator.colors  # 当场上只有黑球时使用原始颜色
+    #     return ShootingBall(random.choice(available_colors), self.pos)
 
     def recharge(self):
         # 过滤掉黑色，同时保留原始颜色选项
@@ -41,7 +95,8 @@ class Shoot:
             color for color in self.ball_generator.get_available_colors() 
             if color != BLACK
         ] or self.ball_generator.colors  # 当场上只有黑球时使用原始颜色
-        return ShootingBall(random.choice(available_colors), self.pos)
+        return ShootingBall(random.choice(available_colors), self.player.get_shoot_pos())
+    
 
     def draw(self, screen):
         self.charged_ball.draw(screen)

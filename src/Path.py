@@ -75,6 +75,33 @@ class Path:
         return direction
 
     def draw(self, screen):
+        # 添加渐变和发光效果
+        glow_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        
         for i in range(len(self.targets) - 1):
-            pygame.draw.line(screen, DARK_TAUPE, self.targets[i],
-                             self.targets[i + 1], 10)
+            start = self.targets[i]
+            end = self.targets[i+1]
+            
+            # 渐变颜色（从深褐色到米色）
+            color_ratio = i/(len(self.targets)-1)
+            line_color = (
+                int(DARK_TAUPE[0]*(1-color_ratio) + TAUPE[0]*color_ratio),
+                int(DARK_TAUPE[1]*(1-color_ratio) + TAUPE[1]*color_ratio),
+                int(DARK_TAUPE[2]*(1-color_ratio) + TAUPE[2]*color_ratio)
+            )
+            
+            # 绘制发光效果
+            pygame.draw.line(glow_surface, (*line_color, 50), start, end, 18)
+            # 绘制主路径
+            pygame.draw.line(screen, line_color, start, end, 10)
+            # 添加路径装饰线
+            pygame.draw.line(screen, (*TAUPE, 200), start, end, 4)
+            
+        # 叠加发光效果
+        screen.blit(glow_surface, (0,0))
+        
+        # 添加路径端点装饰
+        for point in self.targets:
+            pygame.draw.circle(screen, TAUPE, point, 8)
+            pygame.draw.circle(screen, BROWN, point, 6)
+            pygame.draw.circle(screen, (255,255,200,100), point, 12, 2)
