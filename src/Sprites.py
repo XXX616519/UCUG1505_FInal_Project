@@ -1,4 +1,5 @@
 import math
+import pygame.gfxdraw
 from src.Constants import *
 from src.ui import BONUS_IMAGES
 
@@ -43,7 +44,17 @@ class Ball(pygame.sprite.Sprite):
                 self.rect.center = (round(self.pos.x), round(self.pos.y))
 
     def draw(self, screen):
-        pygame.draw.circle(screen, self.color, self.rect.center, BALL_RADIUS)
+        # 添加渐变和高光
+        gradient_rect = pygame.Rect(0, 0, BALL_RADIUS*2, BALL_RADIUS*2)
+        gradient = pygame.Surface((BALL_RADIUS*2, BALL_RADIUS*2), pygame.SRCALPHA)
+        pygame.draw.circle(gradient, self.color, (BALL_RADIUS, BALL_RADIUS), BALL_RADIUS)
+        # 添加高光
+        highlight_pos = (BALL_RADIUS//2, BALL_RADIUS//2)
+        pygame.draw.circle(gradient, (255, 255, 255, 120), highlight_pos, BALL_RADIUS//3)
+        # 添加描边
+        pygame.gfxdraw.aacircle(screen, self.rect.centerx, self.rect.centery, BALL_RADIUS, (30, 30, 30))
+        screen.blit(gradient, self.rect)
+        
         if self.bonus is not None:
             screen.blit(pygame.image.load(
                 BONUS_IMAGES[self.bonus][self.color]),
@@ -68,6 +79,7 @@ class ShootingBall(pygame.sprite.Sprite):
         self.speed = 15
 
         self.time = None
+        self.trail_positions = []
 
     def set_time(self, time):
         self.time = time
@@ -81,8 +93,24 @@ class ShootingBall(pygame.sprite.Sprite):
     def update(self):
         self.rect.center = (self.rect.center[0] + self.target[0] * self.speed,
                             self.rect.center[1] + self.target[1] * self.speed)
+        self.trail_positions.append(self.rect.center)
+        if len(self.trail_positions) > 5:
+            self.trail_positions.pop(0)
 
     def draw(self, screen):
+        # 添加动态拖尾效果
+        for i in range(1, len(self.trail_positions)):
+            alpha = 255 * (i/len(self.trail_positions))
+            pos = self.trail_positions[-i]
+            radius = BALL_RADIUS * (1 - i/len(self.trail_positions))
+            pygame.draw.circle(screen, self.color + (int(alpha),), pos, int(radius))
+        
+        # 添加发光效果
+        glow = pygame.Surface((BALL_RADIUS*4, BALL_RADIUS*4), pygame.SRCALPHA)
+        pygame.draw.circle(glow, self.color + (50,), (BALL_RADIUS*2, BALL_RADIUS*2), BALL_RADIUS*2)
+        screen.blit(glow, self.rect.move(-BALL_RADIUS, -BALL_RADIUS).topleft)
+        
+        # 基础球体绘制
         pygame.draw.circle(screen, self.color, self.rect.center, BALL_RADIUS)
 
 

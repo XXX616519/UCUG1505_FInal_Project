@@ -36,19 +36,35 @@ BONUS_IMAGES = {
     },
 }
 
+# 顶部栏配色方案
+PANEL_BG = (245, 245, 220)  # 浅米色面板背景
+TEXT_PRIMARY = (80, 80, 120)  # 主要文字颜色
+TEXT_SECONDARY = (100, 150, 100)  # 次要文字颜色
+TEXT_ACCENT = (200, 80, 80)  # 强调色
 
 class Label:
-    def __init__(self, text, position, color=(0, 0, 0)):  # 默认字体颜色为黑色
+    def __init__(self, text, position, color=(60, 60, 60), bg_color=(245, 245, 220)):  # 新配色
         self.font = pygame.font.Font('assets/fonts/STCAIYUN.TTF', FONT_SIZE)
-        self.color = color  # 字体颜色
+        self.color = color
         self.text = self.font.render(text, True, color)
         self.width, self.height = self.font.size(text)
-        self.x_start, self.y_start = position[0] - self.width // 2, \
-                                     position[1] - self.height // 2
+        # 计算带背景的尺寸
+        self.bg_width = self.width + 30  # 增加左右边距
+        self.bg_height = self.height + 10  # 增加上下边距
+        self.x_start = position[0] - self.bg_width // 2  # 以背景中心对齐
+        self.y_start = position[1] - self.bg_height // 2
+        # 文本在背景中的位置
+        self.text_x = self.x_start + (self.bg_width - self.width) // 2
+        self.text_y = self.y_start + (self.bg_height - self.height) // 2
+        # 背景效果增强
+        self.bg_surface = pygame.Surface((self.bg_width, self.bg_height), pygame.SRCALPHA)
+        pygame.draw.rect(self.bg_surface, bg_color + (200,),  # 半透明效果
+                        (0, 0, self.bg_width, self.bg_height), 
+                        border_radius=5)
 
 class Display:
-    def __init__(self, background_color=TAUPE, buttons=None, labels=None,
-                 sprites=None):
+    def __init__(self, background_color=TAUPE, gradient_colors=None,
+                 buttons=None, labels=None, sprites=None):
         if buttons is None:
             self.buttons = []
         else:
@@ -65,6 +81,7 @@ class Display:
             self.labels = labels
 
         self.background_color = background_color
+        self.gradient_colors = gradient_colors or [background_color, background_color]
 
 
 class UiManager:
@@ -78,31 +95,55 @@ class UiManager:
 
         # 再初始化其他组件
         self.load_grass_images()
-        self.generate_grass_positions(count=10)
-        self.grass_update_timer = pygame.time.get_ticks()
+        self.grass_positions = []
+        for _ in range(30):
+            x = random.randint(0, WIDTH - 50)
+            y = random.randint(0, HEIGHT - 50)
+            self.grass_positions.append((
+                x, y,
+                random.choice(self.grass_images),
+                random.randint(-5, 5),
+                random.uniform(0.8, 1.2)
+            ))
 
         self.start_game_btn = Button('Start', SCREEN_CENTER)
-        self.start_game_display = Display(buttons=[self.start_game_btn])
+        self.start_game_display = Display(
+            gradient_colors=[(245, 222, 179), (210, 180, 140)],  # 米色渐变
+            buttons=[self.start_game_btn]
+        )
 
-        self.level_label = Label('Level {}'.format(level.number),
-                                   (WIDTH // 2, 40))
-        sprites = [level.player, level.path, level.ball_generator,
-                   level.finish, level.shooting_manager]
-        # 现在可以正确引用pause_btn和restart_btn
+        # 关卡标签
+        self.level_label = Label(f'Level {level.number}', 
+                                (WIDTH // 2, 30), 
+                                color=(80, 80, 120),  # 深蓝灰色
+                                bg_color=(255, 248, 220))  # 米白色
+        
+        sprites = [level.player,  # 恢复玩家坦克
+                   level.path, 
+                   level.ball_generator,
+                   level.finish, 
+                   level.shooting_manager]  # 确保包含发射器
+        
         self.game_display = Display(
-            sprites=[sprite for sprite in sprites],
+            gradient_colors=[(173, 216, 230), (135, 206, 250)],
+            sprites=[sprite for sprite in sprites],  # 现在包含所有必要元素
             labels=[self.level_label],
             buttons=[self.pause_btn, self.restart_btn]
         )
 
         self.continue_btn = Button('Continue', SCREEN_CENTER)
-        self.win_level_display = Display(buttons=[self.continue_btn])
+        self.win_level_display = Display(
+            gradient_colors=[(152, 251, 152), (50, 205, 50)],  # 绿色渐变
+            buttons=[self.continue_btn]
+        )
 
         self.start_level_again_btn = Button('Restart', SCREEN_CENTER,
                                             background_color=TAUPE,
                                             font_color=BROWN)
-        self.lose_level_display = Display(BROWN,
-                                          buttons=[self.start_level_again_btn])
+        self.lose_level_display = Display(
+            gradient_colors=[(255, 182, 193), (220, 20, 60)],  # 红色渐变
+            buttons=[self.start_level_again_btn]
+        )
 
         self.finish_btn = Button('Finish', (WIDTH // 2, HEIGHT // 2 +
                                                2 * BTN_HEIGHT))
@@ -130,8 +171,24 @@ class UiManager:
                                             button.font_color), title_params)
         button.rect = pygame.Rect((x_start, y_start, width, height))
 
-    def draw_window(self, window):
-        self.screen.fill(window.background_color)
+    def draw_window(self, window: Display):
+        """
+        绘制窗口。
+
+        :param window: 显示对象
+        """
+        if window.gradient_colors:
+            # 创建垂直渐变
+            height = HEIGHT
+            for y in range(height):
+                ratio = y / height
+                r = int(window.gradient_colors[0][0] * (1 - ratio) + window.gradient_colors[1][0] * ratio)
+                g = int(window.gradient_colors[0][1] * (1 - ratio) + window.gradient_colors[1][1] * ratio)
+                b = int(window.gradient_colors[0][2] * (1 - ratio) + window.gradient_colors[1][2] * ratio)
+                pygame.draw.line(self.screen, (r, g, b), (0, y), (WIDTH, y))
+        else:
+            self.screen.fill(window.background_color)
+        self.draw_grass()  # 直接绘制固定草地，不再更新
         for button in window.buttons:
             self.draw_button(button)
         for label in window.labels:
@@ -140,21 +197,28 @@ class UiManager:
             sprite.draw(self.screen)
 
     def show_score(self, points):
-        points_label = Label('Score: {}'.format(points), (WIDTH // 4, 40))
+        points_label = Label(f'Score: {points}', 
+                            (WIDTH // 4, 30),
+                            color=(100, 150, 100),  # 叶绿色
+                            bg_color=(245, 245, 220))  # 浅米色
         self.put_label(points_label)
 
     def show_lives(self, lives):
-
-        self.put_label(Label(str(lives), (3 * WIDTH // 4 + 30, 40)))
+        lives_label = Label(str(lives), 
+                           (3 * WIDTH // 4, 30),
+                           color=(200, 80, 80),  # 暗红色
+                           bg_color=(245, 245, 220))
+        self.put_label(lives_label)
+        # 图标位置微调
         self.screen.blit(pygame.transform.smoothscale(
-            pygame.image.load("assets/images/life.png"), (20, 20)),
-            (3 * WIDTH // 4, 30))
+            pygame.image.load("assets/images/life.png"), (25, 25)),
+            (3 * WIDTH // 4 - 35, 20))  # 左移35像素
 
-    def put_label(self, label, color=TAUPE):
-        pygame.draw.rect(self.screen, color, (label.x_start - label.width / 2,
-                                              label.y_start, label.width,
-                                              label.height))
-        self.screen.blit(label.text, (label.x_start, label.y_start))
+    def put_label(self, label):
+        # 绘制带圆角的半透明背景
+        self.screen.blit(label.bg_surface, (label.x_start, label.y_start))
+        # 绘制文字
+        self.screen.blit(label.text, (label.text_x, label.text_y))
 
     def load_grass_images(self):
         """
@@ -167,48 +231,40 @@ class UiManager:
             pygame.image.load("assets/images/grass4.png")
         ]
 
-    def generate_grass_positions(self, count: int):
-        """
-        随机生成草地的位置。
-
-        :param count: 草地的数量
-        """
-        self.grass_positions = []
-        for _ in range(count):
-            x = random.randint(0, WIDTH - 50)  # 随机生成 x 坐标
-            y = random.randint(0, HEIGHT - 50)  # 随机生成 y 坐标
-            self.grass_positions.append((x, y))
-
-    def update_grass(self):
-        """
-        更新草地的位置和图片。
-        """
-        current_time = pygame.time.get_ticks()
-        # 每 1000 毫秒更新一次草地
-        if current_time - self.grass_update_timer > 2000:
-            self.grass_update_timer = current_time
-            self.generate_grass_positions(count=10)  # 重新生成位置
-
     def draw_grass(self):
         """
-        绘制草地。
+        绘制固定背景草地
         """
-        for position in self.grass_positions:
-            grass_image = random.choice(self.grass_images)  # 随机选择草地图片
-            self.screen.blit(grass_image, position)
+        for pos in self.grass_positions:
+            x, y, img, angle, scale = pos
+            # 使用预先生成的参数
+            final_img = pygame.transform.rotozoom(img, angle, scale)
+            self.screen.blit(final_img, (x, y))
 
-    def draw_window(self, window: Display):
-        """
-        绘制窗口。
+class Ball:
+    def draw(self, surface):
+        # 添加光晕效果（仅普通球）
+        if self.type == BallType.Normal:
+            glow = pygame.Surface((self.radius*4, self.radius*4), pygame.SRCALPHA)
+            pygame.draw.circle(glow, (*self.color, 50), (self.radius*2, self.radius*2), self.radius*2)
+            surface.blit(glow, (self.x - self.radius*2, self.y - self.radius*2))
+        
+        # 基础球体（带渐变效果）
+        gradient = pygame.Surface((self.radius*2, self.radius*2), pygame.SRCALPHA)
+        pygame.draw.circle(gradient, self.color, (self.radius, self.radius), self.radius)
+        
+        # 添加高光效果
+        highlight_pos = (self.radius//2, self.radius//2)
+        pygame.draw.circle(gradient, (255, 255, 255, 150), highlight_pos, self.radius//3)
+        
+        # 添加动态旋转效果（仅轨道球）
+        if hasattr(self, 'on_track'):
+            rotated = pygame.transform.rotate(gradient, pygame.time.get_ticks()//10 % 360)
+            surface.blit(rotated, (self.x - self.radius, self.y - self.radius))
+        else:
+            surface.blit(gradient, (self.x - self.radius, self.y - self.radius))
 
-        :param window: 显示对象
-        """
-        self.screen.fill(window.background_color)
-        self.update_grass()  # 更新草地位置
-        self.draw_grass()  # 绘制草地
-        for button in window.buttons:
-            self.draw_button(button)
-        for label in window.labels:
-            self.put_label(label)
-        for sprite in window.spites:
-            sprite.draw(self.screen)
+        # 特殊球保持原贴纸（不需要修改）
+        if self.type != BallType.Normal:
+            # 原有贴图绘制逻辑保持不变
+            surface.blit(self.texture, (self.x - self.radius, self.y - self.radius))
