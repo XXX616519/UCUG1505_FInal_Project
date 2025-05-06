@@ -36,8 +36,12 @@ class Shoot:
             self.shooting_balls.append(shooting_ball)
 
     def recharge(self):
-        return ShootingBall(random.choice(
-            self.ball_generator.get_available_colors()), self.pos)
+        # 过滤掉黑色，同时保留原始颜色选项
+        available_colors = [
+            color for color in self.ball_generator.get_available_colors() 
+            if color != BLACK
+        ] or self.ball_generator.colors  # 当场上只有黑球时使用原始颜色
+        return ShootingBall(random.choice(available_colors), self.pos)
 
     def draw(self, screen):
         self.charged_ball.draw(screen)
@@ -60,7 +64,12 @@ class Shoot:
 
     def handle_shoot(self, shooting_ball):
         for ball in self.ball_generator.balls:
-            if shooting_ball.rect.colliderect(ball.rect):  # 撞击检测
+            if shooting_ball.rect.colliderect(ball.rect):
+                if ball.color == BLACK:  # 黑球不可消除
+                    ball_index = self.ball_generator.balls.index(ball)
+                    self.ball_generator.insert(ball_index, shooting_ball)
+                    self.shooting_balls.remove(shooting_ball)
+                    break
                 chain = self.collect_chain(ball, shooting_ball.color)
                 if len(chain) > 1:  # 符合条件的撞击（球链长度大于 1）
                     # 播放爆炸声音
@@ -116,6 +125,8 @@ class Shoot:
         return []
 
     def collect_chain(self, ball, color):
+        if ball.color == BLACK:  # 排除黑球
+            return []
         ball_index = self.ball_generator.balls.index(ball)
         ball_color = ball.color
 
@@ -135,10 +146,12 @@ class Shoot:
 
     def collect_half_chain(self, i, delta, color):
         half_chain = []
-        while len(self.ball_generator.balls) > i >= 0 and \
-                self.ball_generator.balls[i].color == color:
-            half_chain.append(self.ball_generator.balls[i])
+        while len(self.ball_generator.balls) > i >= 0:
+            current_ball = self.ball_generator.balls[i]
+            # 遇到不同颜色（包括黑色）时停止收集
+            if current_ball.color != color:
+                break
+            half_chain.append(current_ball)
             i += delta
-
         return half_chain
 

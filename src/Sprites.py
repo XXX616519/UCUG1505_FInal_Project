@@ -56,9 +56,11 @@ class Ball(pygame.sprite.Sprite):
         screen.blit(gradient, self.rect)
         
         if self.bonus is not None:
-            screen.blit(pygame.image.load(
-                BONUS_IMAGES[self.bonus][self.color]),
-                (self.rect.x, self.rect.y))
+            # 使用get方法安全访问，当颜色不存在时返回None
+            bonus_image_path = BONUS_IMAGES.get(self.bonus, {}).get(self.color)
+            if bonus_image_path:
+                screen.blit(pygame.image.load(bonus_image_path),
+                          (self.rect.x, self.rect.y))
 
     def __eq__(self, other):
         return self.color == other.color and \

@@ -15,8 +15,12 @@ class Generate_Ball(Basic_Ball):
             if len(self.balls) == 0 or \
                     self.balls[0].pos_in_path >= 2 * BALL_RADIUS // \
                     self.path.step:
-                self.balls.insert(0, Ball(random.choice(self.colors), 0,
-                                          self.path))
+                # 最后一个球设为黑色
+                if self.number_of_generated == self.number_to_generate - 1:
+                    color = BLACK
+                else:
+                    color = random.choice(self.colors)
+                self.balls.insert(0, Ball(color, 0, self.path))
                 self.number_of_generated += 1
 
     def move_stopped_ball(self, i):
@@ -73,17 +77,19 @@ class Generate_Ball(Basic_Ball):
         self.update_chain()
         if not self.reverse and not self.pause:
             self.update_balls()
-        if len(self.balls) == 0 and self.number_of_generated == \
-                self.number_to_generate:
+        # 修改胜利条件
+        if len(self.balls) == 1 and self.balls[0].color == BLACK:
             self.score_manager.win()
-        
+        elif len(self.balls) == 0 and self.number_of_generated == self.number_to_generate:
+            self.score_manager.win()
 
     def draw(self, screen):
         for ball in self.balls:
             ball.draw(screen)
 
     def get_available_colors(self):
-        return [ball.color for ball in self.balls]
+        # 排除黑色，保留原始颜色选项
+        return [ball.color for ball in self.balls if ball.color != BLACK] or self.colors
 
     def insert(self, index, shooting_ball):
         ball = self.convert_shooting_ball(index, shooting_ball)
