@@ -191,7 +191,18 @@ class Game:
         while not game_finished and not self.is_quit:
             self.level.ball_generator.generate()
             self.clock.tick(FPS)
-
+            # 语音检测
+            # voice_shoot = False
+            # if not self.is_paused:
+            #     voice_shoot = self.level.player.listen_for_shoot()
+            voice_shoot = False
+            if not self.is_paused:
+                try:
+                    voice_shoot = self.level.player.listen_for_shoot()
+                except Exception as e:
+                    print(f"Voice recognition error: {e}")
+                    voice_shoot = False
+            
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.is_quit = True
@@ -202,8 +213,8 @@ class Game:
                     elif self.ui_manager.restart_btn.rect.collidepoint(mouse_pos):
                         self.setup_new_game()
                         self.score_manager.setup_next_level()
-                    else:
-                        self.level.shooting_manager.shoot(mouse_pos)
+                    # else:
+                    #     self.level.shooting_manager.shoot(mouse_pos)
 
             # if not self.is_paused:
             #     target_angle = self.get_gesture_shoot_target()
@@ -215,13 +226,28 @@ class Game:
                 
             #     self.update_sprites()
 
+            # if not self.is_paused:
+            #     # 手势控制
+            #     target_angle = self.get_gesture_shoot_target()
+            #     if target_angle is not None:
+            #         self.level.player.set_gesture_angle(target_angle)
+            #         # 自动射击
+            #         self.level.shooting_manager.shoot(target_angle)
+            #     else:
+            #         self.level.player.set_mouse_control()
+                
+            #     self.update_sprites()
+
+            # self.update_display(self.ui_manager.game_display)
+
+            
             if not self.is_paused:
-                # 手势控制
                 target_angle = self.get_gesture_shoot_target()
                 if target_angle is not None:
                     self.level.player.set_gesture_angle(target_angle)
-                    # 自动射击
-                    self.level.shooting_manager.shoot(target_angle)
+                    # 语音触发射击
+                    if voice_shoot:
+                        self.level.shooting_manager.shoot(target_angle)
                 else:
                     self.level.player.set_mouse_control()
                 

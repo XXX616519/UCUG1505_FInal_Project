@@ -44,7 +44,11 @@ class Player(pygame.sprite.Sprite):
         self.voice_recognizer = sr.Recognizer()
         self.last_voice_time = 0
         self.voice_cooldown = 1.0  # 1秒冷却时间
+        self.microphone = sr.Microphone()
 
+        # 调整麦克风环境噪声
+        with self.microphone as source:
+            self.recognizer.adjust_for_ambient_noise(source)
 
         if level == 1:
             self.pos = (530, 330)
@@ -66,6 +70,30 @@ class Player(pygame.sprite.Sprite):
         
         # 射击方向
         self.shoot_direction = [1, 0]  # 默认向右
+
+    def listen_for_shoot(self):
+        """监听射击语音命令"""
+        current_time = time.time()
+        if current_time - self.last_voice_time < self.voice_cooldown:
+            return False
+            
+        try:
+            with self.microphone as source:
+                print("Listening for 'shoot' command...")
+                audio = self.recognizer.listen(source, timeout=1, phrase_time_limit=1)
+                try:
+                    command = self.recognizer.recognize_google(audio).lower()
+                    if "shoot" in command:
+                        self.last_voice_time = current_time
+                        return True
+                except sr.UnknownValueError:
+                    print("Could not understand audio")
+                except sr.RequestError as e:
+                    print(f"Could not request results; {e}")
+        except Exception as e:
+            print(f"Microphone error: {e}")
+        
+        return False
 
     def update(self):
         if not self.use_gesture_control:
