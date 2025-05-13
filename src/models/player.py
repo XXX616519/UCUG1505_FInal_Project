@@ -43,6 +43,7 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, level):
         pygame.sprite.Sprite.__init__(self)
         self.voice_recognizer = sr.Recognizer()
+        self.recognizer = sr.Recognizer()
         self.last_voice_time = 0
         self.voice_cooldown = 1.0  # 1秒冷却时间
         self.microphone = sr.Microphone()
