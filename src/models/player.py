@@ -3,6 +3,7 @@ from src.Constants import *
 from src.Special_Ball import Bonus
 import random
 import datetime
+import time
 import speech_recognition as sr
 import math
 
@@ -71,29 +72,70 @@ class Player(pygame.sprite.Sprite):
         # 射击方向
         self.shoot_direction = [1, 0]  # 默认向右
 
-    def listen_for_shoot(self):
-        """监听射击语音命令"""
+    # def listen_for_shoot(self):
+    #     """监听射击语音命令"""
+    #     current_time = time.time()
+    #     if current_time - self.last_voice_time < self.voice_cooldown:
+    #         return False
+            
+    #     try:
+    #         with self.microphone as source:
+    #             print("Listening for 'shoot' command...")
+    #             audio = self.recognizer.listen(source, timeout=1, phrase_time_limit=1)
+    #             try:
+    #                 command = self.recognizer.recognize_google(audio).lower()
+    #                 if "shoot" in command:
+    #                     self.last_voice_time = current_time
+    #                     return True
+    #             except sr.UnknownValueError:
+    #                 print("Could not understand audio")
+    #             except sr.RequestError as e:
+    #                 print(f"Could not request results; {e}")
+    #     except Exception as e:
+    #         print(f"Microphone error: {e}")
+        
+    #     return False
+
+    def listen_for_shoot(self, allowed_commands=["shoot", "hello", "end"]):
+        """
+        监听语音命令，触发射击动作。
+        
+        修改说明：
+        1. 采用 allowed_commands允许的命令列表来判断识别结果中是否包含指定关键词
+           避免之前使用模型的 group() 方法导致错误(“模型无法调用 group”)。
+        2. 如果识别到允许的命令，则返回 True并更新 last_voice_time 用于冷却控制。
+        3. 如果超时或识别失败，则返回 False。
+        
+        allowed_commands: 一个字符串列表，包含触发射击的语音命令（如 "shoot", "hello", "end" 等）。
+        """
         current_time = time.time()
         if current_time - self.last_voice_time < self.voice_cooldown:
+            # 冷却时间内不处理新命令
             return False
-            
+
         try:
             with self.microphone as source:
-                print("Listening for 'shoot' command...")
-                audio = self.recognizer.listen(source, timeout=1, phrase_time_limit=1)
-                try:
-                    command = self.recognizer.recognize_google(audio).lower()
-                    if "shoot" in command:
-                        self.last_voice_time = current_time
+                print("Listening for voice command...")
+                # 延长 phrase_time_limit 以确保能识别较长的指令
+                audio = self.voice_recognizer.listen(source, timeout=1, phrase_time_limit=2)
+            try:
+                # 使用 Google 的语音识别将语音转换为文本
+                command = self.voice_recognizer.recognize_google(audio, language="en-US").lower()
+                print("Recognized command:", command)
+                # 检查识别文本中是否包含任一允许的命令
+                for valid_cmd in allowed_commands:
+                    if valid_cmd in command:
+                        self.last_voice_time = current_time  # 更新上次识别时间
                         return True
-                except sr.UnknownValueError:
-                    print("Could not understand audio")
-                except sr.RequestError as e:
-                    print(f"Could not request results; {e}")
+            except sr.UnknownValueError:
+                print("Could not understand audio")
+            except sr.RequestError as e:
+                print(f"Could not request results; {e}")
         except Exception as e:
             print(f"Microphone error: {e}")
-        
+
         return False
+
 
     def update(self):
         if not self.use_gesture_control:

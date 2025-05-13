@@ -198,7 +198,7 @@ class Game:
             voice_shoot = False
             if not self.is_paused:
                 try:
-                    voice_shoot = self.level.player.listen_for_shoot()
+                    voice_shoot = self.level.player.listen_for_shoot(["shoot", "hello", "end"])
                 except Exception as e:
                     print(f"Voice recognition error: {e}")
                     voice_shoot = False
