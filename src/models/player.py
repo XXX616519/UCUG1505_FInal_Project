@@ -1,42 +1,9 @@
-from src.Sprites import ShootingBall
-from src.Constants import * 
-from src.Special_Ball import Bonus
-import random
-import datetime
+import pygame
+import math
 import time
 import speech_recognition as sr
-import math
-
-
-# class Player(pygame.sprite.Sprite):
-#     def __init__(self, level):
-#         pygame.sprite.Sprite.__init__(self)
-
-#         if level == 1:
-#             self.pos = (530, 330)
-#         else:
-#             self.pos = SCREEN_CENTER
-
-#         self.original_image = pygame.transform.smoothscale(
-#             pygame.image.load('assets/images/player.png'), PLAYER_SIZE)
-#         self.original_image.set_colorkey(BLACK)
-
-#         self.image = self.original_image
-
-#         self.rect = self.image.get_rect(center=self.pos)
-
-#         self.angle = 0
-
-#     def update(self):
-#         mouse_x, mouse_y = pygame.mouse.get_pos()
-#         rel_x, rel_y = mouse_x - self.rect.x, mouse_y - self.rect.y
-#         self.angle = (180 / math.pi) * (-math.atan2(rel_y, rel_x)) + 90
-#         self.image = pygame.transform.rotate(self.original_image, self.angle)
-#         self.image.set_colorkey(BLACK)
-#         self.rect = self.image.get_rect(center=self.rect.center)
-
-#     def draw(self, screen):
-#         screen.blit(self.image, (self.rect.x, self.rect.y))
+from src.Constants import *
+from src.Sprites import ShootingBall
 
 
 class Player(pygame.sprite.Sprite):
@@ -45,88 +12,48 @@ class Player(pygame.sprite.Sprite):
         self.voice_recognizer = sr.Recognizer()
         self.recognizer = sr.Recognizer()
         self.last_voice_time = 0
-        self.voice_cooldown = 1.0  # 1秒冷却时间
+        self.voice_cooldown = 0.1  # 冷却时间
         self.microphone = sr.Microphone()
 
-        # 调整麦克风环境噪声
-        with self.microphone as source:
-            self.recognizer.adjust_for_ambient_noise(source)
-
-        if level == 1:
-            self.pos = (530, 330)
-        else:
-            self.pos = SCREEN_CENTER
+        # if level == 1:
+        self.pos = (530, 330)
+        # else:
+        #     self.pos = SCREEN_CENTER
 
         # 加载原始图像
         self.original_image = pygame.transform.smoothscale(
             pygame.image.load('assets/images/player.png'), PLAYER_SIZE)
         self.original_image.set_colorkey(BLACK)
-        
+
         self.image = self.original_image
         self.rect = self.image.get_rect(center=self.pos)
-        
+
         # 旋转控制
         self.angle = 0
         self.use_gesture_control = False  # 默认使用鼠标控制
         self.gesture_target_angle = 0  # 手势控制的目标角度
-        
+
         # 射击方向
         self.shoot_direction = [1, 0]  # 默认向右
-
-    # def listen_for_shoot(self):
-    #     """监听射击语音命令"""
-    #     current_time = time.time()
-    #     if current_time - self.last_voice_time < self.voice_cooldown:
-    #         return False
-            
-    #     try:
-    #         with self.microphone as source:
-    #             print("Listening for 'shoot' command...")
-    #             audio = self.recognizer.listen(source, timeout=1, phrase_time_limit=1)
-    #             try:
-    #                 command = self.recognizer.recognize_google(audio).lower()
-    #                 if "shoot" in command:
-    #                     self.last_voice_time = current_time
-    #                     return True
-    #             except sr.UnknownValueError:
-    #                 print("Could not understand audio")
-    #             except sr.RequestError as e:
-    #                 print(f"Could not request results; {e}")
-    #     except Exception as e:
-    #         print(f"Microphone error: {e}")
-        
-    #     return False
 
     def listen_for_shoot(self, allowed_commands=["shoot", "hello", "end"]):
         """
         监听语音命令，触发射击动作。
-        
-        修改说明：
-        1. 采用 allowed_commands允许的命令列表来判断识别结果中是否包含指定关键词
-           避免之前使用模型的 group() 方法导致错误(“模型无法调用 group”)。
-        2. 如果识别到允许的命令，则返回 True并更新 last_voice_time 用于冷却控制。
-        3. 如果超时或识别失败，则返回 False。
-        
-        allowed_commands: 一个字符串列表，包含触发射击的语音命令（如 "shoot", "hello", "end" 等）。
         """
         current_time = time.time()
         if current_time - self.last_voice_time < self.voice_cooldown:
-            # 冷却时间内不处理新命令
             return False
 
         try:
             with self.microphone as source:
                 print("Listening for voice command...")
-                # 延长 phrase_time_limit 以确保能识别较长的指令
                 audio = self.voice_recognizer.listen(source, timeout=1, phrase_time_limit=2)
             try:
-                # 使用 Google 的语音识别将语音转换为文本
                 command = self.voice_recognizer.recognize_google(audio, language="en-US").lower()
                 print("Recognized command:", command)
-                # 检查识别文本中是否包含任一允许的命令
                 for valid_cmd in allowed_commands:
                     if valid_cmd in command:
-                        self.last_voice_time = current_time  # 更新上次识别时间
+                        self.last_voice_time = current_time
                         return True
             except sr.UnknownValueError:
                 print("Could not understand audio")
@@ -138,24 +65,34 @@ class Player(pygame.sprite.Sprite):
         return False
 
 
-    def update(self):
+    def update(self,passangle):
         if not self.use_gesture_control:
             # 鼠标控制模式
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            rel_x, rel_y = mouse_x - self.rect.centerx, mouse_y - self.rect.centery
+            rel_x = mouse_x - self.rect.x
+            rel_y = mouse_y - self.rect.y
             self.angle = (180 / math.pi) * (-math.atan2(rel_y, rel_x)) + 90
         else:
             # 手势控制模式
-            self.angle = self.gesture_target_angle
-        
+            #self.angle = self.gesture_target_angle
+            self.angle=passangle
+
         # 更新图像旋转
+        if self.angle > 360 : 
+            res=self.angle % 360
+            self.angle=res
+        
         self.image = pygame.transform.rotate(self.original_image, self.angle)
+        #self.image=rotate_image(self.original_image, self.angle)
+        print("selfangle= ",self.angle)
         self.image.set_colorkey(BLACK)
         self.rect = self.image.get_rect(center=self.pos)
-        
-        # 计算射击方向
-        angle_rad = math.radians(self.angle)
-        self.shoot_direction = [math.cos(angle_rad), math.sin(angle_rad)]
+
+        # 根据当前角度更新射击方向
+        # angle_rad = math.radians(self.angle)
+        # print("anglerad= ",angle_rad)
+        # self.shoot = [math.cos(angle_rad), math.sin(angle_rad)]
+        # print("shootdi= ",self.shoot)
 
     def set_gesture_angle(self, angle):
         """设置手势控制的角度"""
@@ -167,8 +104,8 @@ class Player(pygame.sprite.Sprite):
         self.use_gesture_control = False
 
     def get_shoot_pos(self):
-        """获取射击起始位置(稍微靠前一些)"""
-        offset = 30  # 从玩家中心向前偏移的距离
+        """获取射击起始位置(略微靠前)"""
+        offset = 0  # 偏移距离
         return (
             self.pos[0] + self.shoot_direction[0] * offset,
             self.pos[1] + self.shoot_direction[1] * offset

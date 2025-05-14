@@ -1,7 +1,6 @@
 import pygame
 import cv2
 import mediapipe as mp
-import speech_recognition as sr
 import time
 from src.Path import Path
 from src.Sprites import *
@@ -12,9 +11,9 @@ from src.Score import Score
 from src.ui.ui_gen import UiManager
 from src.ui import *
 from src.Level import Level
+from src.Constants import WIDTH, HEIGHT, FPS, SCREEN_CENTER
 
-
-# initialize the camera
+# 初始化摄像头
 cap = cv2.VideoCapture(0)
 
 mp_hands = mp.solutions.hands
@@ -26,13 +25,11 @@ hands = mp_hands.Hands(
     min_tracking_confidence=0.5
 )
 
-
 class Game:
     def __init__(self):
         pygame.init()
         pygame.mixer.init()
         pygame.display.set_caption("Zuma")
-
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         self.clock = pygame.time.Clock()
         self.level_num = 1
@@ -41,64 +38,11 @@ class Game:
         self.is_quit = False
         self.is_paused = False
 
-    # def get_gesture_shoot_target(self):
-    #     ret, frame = cap.read()
-    #     if not ret:
-    #         return None
-
-    #     # 初始化返回值（默认无手势）
-    #     gesture_result = None
-
-    #     # 转换颜色空间并镜像
-    #     image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    #     image = cv2.flip(image, 1)
-    #     results = hands.process(image)
-
-    #     if results.multi_hand_landmarks:
-    #         # 取第一个检测到的手
-    #         hand_landmarks = results.multi_hand_landmarks[0]
-    #         h, w, _ = image.shape
-
-    #         # 使用手腕基部（Landmark 0）作为手掌位置
-    #         wrist = hand_landmarks.landmark[mp_hands.HandLandmark.WRIST]
-    #         current_x = int(wrist.x * WIDTH)  # 映射到 Pygame 窗口宽度
-    #         current_y = int(wrist.y * HEIGHT)  # 映射到 Pygame 窗口高度
-
-    #         # 判断是否为滑动动作
-    #         if not hasattr(self, 'slide_start_x'):
-    #             # 初始化滑动起始位置（第一次检测到手掌时记录）
-    #             self.slide_start_x = current_x
-    #             self.slide_start_time = time.time()
-    #         else:
-    #             # 计算滑动距离和方向
-    #             delta_x = current_x - self.slide_start_x
-    #             elapsed_time = time.time() - self.slide_start_time
-
-    #             # 修改点1：调整滑动触发条件（降低阈值）
-    #             if (
-    #                 abs(delta_x) > WIDTH * 0.2 and  # 原0.5 → 0.2
-    #                 elapsed_time < 1.0 and           # 原0.5 → 1.0
-    #                 abs(current_y - int(wrist.y * HEIGHT)) < HEIGHT * 0.3  # 原0.2 → 0.3
-    #             ):
-    #                 # 判断方向：左到右为正方向
-    #                 if delta_x > 0:
-    #                     gesture_result = "rotate_360_clockwise"  # 顺时针旋转
-    #                 else:
-    #                     gesture_result = "rotate_360_counterclockwise"  # 逆时针旋转
-                    
-    #                 # 重置滑动检测
-    #                 del self.slide_start_x
-    #                 del self.slide_start_time
-
-    #         return gesture_result
-    #     else:
-    #         # 未检测到手时清除滑动状态
-    #         if hasattr(self, 'slide_start_x'):
-    #             del self.slide_start_x
-    #             del self.slide_start_time
-    #         return None
-
     def get_gesture_shoot_target(self):
+        """
+        读取摄像头并检测手势
+        返回值为一个元组 (旋转角度, 是否握拳)
+        """
         ret, frame = cap.read()
         if not ret:
             print("无法读取摄像头画面")
@@ -110,29 +54,39 @@ class Game:
         results = hands.process(image)
 
         if results.multi_hand_landmarks:
-            # 取第一个检测到的手
             hand_landmarks = results.multi_hand_landmarks[0]
-            h, w, _ = image.shape
+            # h, w, _ = image.shape
 
-            # 使用手腕基部（Landmark 0）作为手掌位置
+            # 使用手腕作为参考点
             wrist = hand_landmarks.landmark[mp_hands.HandLandmark.WRIST]
-            current_x = int(wrist.x * WIDTH)  # 映射到Pygame窗口宽度
-            current_y = int(wrist.y * HEIGHT)  # 映射到Pygame窗口高度
-            
-            # 打印手掌位置坐标
-            # print(f"手掌位置: X={current_x}, Y={current_y}")
+            current_x = int(wrist.x * WIDTH)
+            # current_y = int(wrist.y * HEIGHT)
 
-            # 计算旋转角度（0-360度）
-            rotation_angle = int((current_x / WIDTH) * 360)
-            rotation_angle = max(0, min(360, rotation_angle))
+            # 根据手腕横坐标计算旋转角度（0-360 度）
+            rotation_angle = int((current_x / WIDTH) * 720)
+            rotation_angle = max(0, min(720, rotation_angle))
+
+            # 判断是否为握拳（除了拇指之外，其他四指的指尖与手腕的距离是否都较小）
+            def distance(a, b):
+                return ((a.x - b.x)**2 + (a.y - b.y)**2)**0.5
+
+            index_dist = distance(hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP], wrist)
+            middle_dist = distance(hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_TIP], wrist)
+            ring_dist = distance(hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_TIP], wrist)
+            pinky_dist = distance(hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP], wrist)
             
-            # print(f"计算得到的旋转角度: {rotation_angle}度")
-            
-            return rotation_angle
+            # 根据经验设置阈值（归一化坐标中，一般阈值设置为 0.1）
+            fist_threshold = 0.2
+            is_fist = (index_dist < fist_threshold and 
+                       middle_dist < fist_threshold and 
+                       ring_dist < fist_threshold and 
+                       pinky_dist < fist_threshold)
+            #print(rotation_angle)
+            return (rotation_angle, is_fist)
+        
         else:
-            print("未检测到手部")
+            #print("未检测到手部")
             return None
-
 
     def play(self):
         self.continue_game(self.ui_manager.start_game_btn,
@@ -140,50 +94,11 @@ class Game:
         while not self.is_quit:
             self.setup_new_game()
             self.play_game()
-
         pygame.quit()
 
     def setup_new_game(self):
         self.level = Level(self.level_num, self.score_manager)
         self.ui_manager = UiManager(self.screen, self.level)
-
-    # def play_game(self):
-    #     game_finished = False
-
-    #     while not game_finished and not self.is_quit:
-    #         self.level.ball_generator.generate()
-
-    #         self.clock.tick(FPS)
-
-    #         for event in pygame.event.get():
-    #             if event.type == pygame.QUIT:
-    #                 self.is_quit = True
-    #             elif event.type == pygame.MOUSEBUTTONDOWN:
-    #                 mouse_pos = pygame.mouse.get_pos()
-    #                 if self.ui_manager.pause_btn.rect.collidepoint(mouse_pos):
-    #                     self.is_paused = not self.is_paused
-    #                 elif self.ui_manager.restart_btn.rect.collidepoint(mouse_pos):
-    #                     self.setup_new_game()
-    #                     self.score_manager.setup_next_level()
-    #                 else:
-    #                     self.level.shooting_manager.shoot(mouse_pos)
-
-    #         # 如果没有暂停，则处理手势输入
-    #         if not self.is_paused:
-    #             gesture_target = self.get_gesture_shoot_target()
-    #             if gesture_target:
-    #                 # 调用射击管理器发射函数，传入手势确定的目标方向
-    #                 self.level.shooting_manager.shoot(gesture_target)
-    #             self.update_sprites()
-
-    #         self.update_display(self.ui_manager.game_display)
-
-    #         if self.score_manager.is_win:
-    #             game_finished = True
-    #             self.handle_win()
-    #         elif self.score_manager.is_lose:
-    #             game_finished = True
-    #             self.handle_lose()
 
     def play_game(self):
         game_finished = False
@@ -191,17 +106,6 @@ class Game:
         while not game_finished and not self.is_quit:
             self.level.ball_generator.generate()
             self.clock.tick(FPS)
-            # 语音检测
-            # voice_shoot = False
-            # if not self.is_paused:
-            #     voice_shoot = self.level.player.listen_for_shoot()
-            voice_shoot = False
-            if not self.is_paused:
-                try:
-                    voice_shoot = self.level.player.listen_for_shoot(["shoot", "hello", "end"])
-                except Exception as e:
-                    print(f"Voice recognition error: {e}")
-                    voice_shoot = False
             
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -213,45 +117,29 @@ class Game:
                     elif self.ui_manager.restart_btn.rect.collidepoint(mouse_pos):
                         self.setup_new_game()
                         self.score_manager.setup_next_level()
-                    # else:
-                    #     self.level.shooting_manager.shoot(mouse_pos)
+                    else:
+                        self.level.shooting_manager.shoot(mouse_pos)
 
-            # if not self.is_paused:
-            #     target_angle = self.get_gesture_shoot_target()
-            #     if target_angle is not None:
-            #         print(f"设置玩家旋转角度: {target_angle}")
-            #         self.level.player.rotate_angle = target_angle
-            #         # 强制调用玩家更新
-            #         self.level.player.update()
-                
-            #     self.update_sprites()
-
-            # if not self.is_paused:
-            #     # 手势控制
-            #     target_angle = self.get_gesture_shoot_target()
-            #     if target_angle is not None:
-            #         self.level.player.set_gesture_angle(target_angle)
-            #         # 自动射击
-            #         self.level.shooting_manager.shoot(target_angle)
-            #     else:
-            #         self.level.player.set_mouse_control()
-                
-            #     self.update_sprites()
-
-            # self.update_display(self.ui_manager.game_display)
-
-            
             if not self.is_paused:
-                target_angle = self.get_gesture_shoot_target()
-                if target_angle is not None:
-                    self.level.player.set_gesture_angle(target_angle)
-                    # 语音触发射击
-                    if voice_shoot:
-                        self.level.shooting_manager.shoot(target_angle)
-                else:
+                gesture = self.get_gesture_shoot_target()
+                angle=0
+                if gesture:
+                    angle, is_fist = gesture
+                    # 更新玩家旋转角度
+                    self.level.player.set_gesture_angle(angle)
+                    # 当检测到握拳时立即触发射击动作
+                    if is_fist:
+                        if angle>360:
+                            angle %= 360
+                        #self.update_sprites(angle)
+                        print("检测到握拳，发射小球= ",angle)
+                        self.level.shooting_manager.shoot(angle)
+                else :
                     self.level.player.set_mouse_control()
-                
-                self.update_sprites()
+
+                if angle>360:
+                    angle%=360
+                self.update_sprites(angle)
 
             self.update_display(self.ui_manager.game_display)
 
@@ -308,11 +196,10 @@ class Game:
                         self.level_num = 1
                     elif self.ui_manager.finish_btn.rect.collidepoint(mouse):
                         self.is_quit = True
-
             self.update_display(self.ui_manager.win_game_display)
 
-    def update_sprites(self):
-        self.level.player.update()
+    def update_sprites(self,angle):
+        self.level.player.update(angle)
         self.level.shooting_manager.update()
         self.level.ball_generator.update()
         self.level.bonus_manager.update()
