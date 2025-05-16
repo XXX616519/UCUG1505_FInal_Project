@@ -2,9 +2,136 @@ from ._variables import *
 from .grid import Grid
 from numba import njit
 import numpy as np
+import pandas as pd
 from PIL import Image, ImageFilter
 import pygame
 import sys
+from datetime import datetime
+
+
+
+def parse_color(color_str):
+    color_str = color_str.strip().strip('"').strip("'").strip("()")
+    return tuple(int(c.strip()) for c in color_str.split(','))
+
+def convert_time_to_float(time_str):
+    """
+    将时间字符串转换成浮点数（时间戳），本例使用秒级的时间戳。
+    """
+    dt = datetime.fromisoformat(time_str)
+    return dt.timestamp()
+
+def min_max_normalize(arr):
+    """
+    使用最小—最大标准化，将数组转换到 [0, 1] 范围
+    """
+    min_val = np.min(arr)
+    max_val = np.max(arr)
+    if max_val - min_val == 0:
+        return np.zeros_like(arr)
+    return (arr - min_val) / (max_val - min_val)
+
+
+# def construct_matrix_from_csv(csv_file):
+#     # 1. 读取 CSV 文件（假设文件包含三列：time, angle, color）
+#     df = pd.read_csv(csv_file)
+    
+#     # 2. 将时间字符串转换为数值（时间戳）
+#     df['time_float'] = df['time'].apply(convert_time_to_float)
+    
+#     # 3. 解析颜色字符串，拆分成 R, G, B 三个新列
+#     colors_parsed = df['color'].apply(parse_color)
+#     df[['R', 'G', 'B']] = pd.DataFrame(colors_parsed.tolist(), index=df.index)
+    
+#     # 4. 从所有数据中随机抽取 6 行，用于构造模型输入数据
+#     sample_df = df.sample(n=6, random_state=42)  # 固定 random_state 保证可复现性
+    
+#     # 只保留需要的 5 个特征：时间、角度、R、G、B
+#     data = sample_df[['time_float', 'angle', 'R', 'G', 'B']].to_numpy()  # 形状 (6, 5)
+    
+#     # 5. 对 6×5 的数据按列进行最小—最大标准化
+#     normalized_data = np.apply_along_axis(min_max_normalize, 0, data)  # 形状依然 (6, 5)
+    
+#     # 6. 对每一列数据进行一维线性插值，将 6 个点扩展为 20 个点
+#     #    设原始 x 坐标为 0,1,2,3,4,5，新坐标为等间距取 20 个点（0 到 5）
+#     x_original = np.arange(normalized_data.shape[0])  # [0,1,2,3,4,5]
+#     x_new = np.linspace(0, normalized_data.shape[0] - 1, 20)  # 20 个点
+#     interpolated_data = np.zeros((20, normalized_data.shape[1]))  # 初始化 20×5 矩阵
+    
+#     for col in range(normalized_data.shape[1]):
+#         interpolated_data[:, col] = np.interp(x_new, x_original, normalized_data[:, col])
+    
+#     # 7. 计算每一行前 5 列的平均值，作为第 6 列加入矩阵
+#     mean_col = np.mean(interpolated_data, axis=1).reshape(-1, 1)  # 形状 (20, 1)
+#     interpolated_data_with_mean = np.hstack([interpolated_data, mean_col])  # 形状 (20, 6)
+    
+#     # 8. 为了最终构造 6×6 的矩阵，从 20 行中随机抽取 6 行
+#     final_indices = np.random.choice(interpolated_data_with_mean.shape[0], size=6, replace=False)
+#     final_matrix = interpolated_data_with_mean[final_indices, :]  # 最终矩阵形状 (6, 6)
+    
+#     # 如果希望用 np.zeros((len(colours), len(colours))) 的格式展示，
+#     # 可将矩阵转换为如下格式：
+#     final_result = np.zeros((6, 6))
+#     final_result[:, :] = final_matrix
+    
+#     return final_result
+
+
+def construct_matrix_from_csv(csv_file):
+    # 1. 读取 CSV 文件（假设文件包含三列：time, angle, color）
+    df = pd.read_csv(csv_file)
+    
+    # 2. 将时间字符串转换为数值（时间戳）
+    df['time_float'] = df['time'].apply(convert_time_to_float)
+    
+    # 3. 解析颜色字符串，拆分成 R, G, B 三个新列
+    colors_parsed = df['color'].apply(parse_color)
+    df[['R', 'G', 'B']] = pd.DataFrame(colors_parsed.tolist(), index=df.index)
+    
+    # 4. 从所有数据中随机抽取 6 行，用于构造模型输入数据
+    sample_df = df.sample(n=6, random_state=42)  # 固定 random_state 保证可复现性
+    
+    # 只保留需要的 5 个特征：时间、角度、R、G、B
+    data = sample_df[['time_float', 'angle', 'R', 'G', 'B']].to_numpy()  # 形状 (6, 5)
+    
+    # 5. 对 6×5 的数据按列进行最小—最大标准化
+    normalized_data = np.apply_along_axis(min_max_normalize, 0, data)  # 形状依然 (6, 5)
+    
+    # 6. 对每一列数据进行一维线性插值，将 6 个点扩展为 20 个点
+    #    设原始 x 坐标为 0,1,2,3,4,5，新坐标为等间距取 20 个点（0 到 5）
+    x_original = np.arange(normalized_data.shape[0])  # [0,1,2,3,4,5]
+    x_new = np.linspace(0, normalized_data.shape[0] - 1, 20)  # 20 个点
+    interpolated_data = np.zeros((20, normalized_data.shape[1]))  # 初始化 20×5 矩阵
+    
+    for col in range(normalized_data.shape[1]):
+        interpolated_data[:, col] = np.interp(x_new, x_original, normalized_data[:, col])
+    
+    # 7. 计算每一行前 5 列的平均值，作为第 6 列加入矩阵
+    mean_col = np.mean(interpolated_data, axis=1).reshape(-1, 1)  # 形状 (20, 1)
+    interpolated_data_with_mean = np.hstack([interpolated_data, mean_col])  # 形状 (20, 6)
+    
+    # 8. 为了最终构造 6×6 的矩阵，从 20 行中随机抽取 6 行
+    final_indices = np.random.choice(interpolated_data_with_mean.shape[0], size=6, replace=False)
+    final_matrix = interpolated_data_with_mean[final_indices, :]  # 最终矩阵形状 (6, 6)
+    
+    # 9. 随机将矩阵中的一些元素设置为负数
+    # 假设随机选择 10% 到 30% 的元素（即大约 4 到 11 个元素）
+    num_elements = final_matrix.size  # 6x6 = 36 个元素
+    num_negatives = np.random.randint(int(0.1 * num_elements), int(0.3 * num_elements) + 1)  # 随机选择 4 到 11 个元素
+    # 获取随机索引
+    indices = np.random.choice(num_elements, size=num_negatives, replace=False)
+    # 将一维索引转换为二维索引
+    rows, cols = np.unravel_index(indices, final_matrix.shape)
+    # 将选中的元素设置为负数
+    final_matrix[rows, cols] = -final_matrix[rows, cols]
+    
+    # 10. 转换为最终格式
+    final_result = np.zeros((6, 6))
+    final_result[:, :] = final_matrix
+    
+    return final_result
+
+
 
 def blur(surface, strength=7, scale=0.5):
     """Takes in a surface and returns a blurred version of it"""
@@ -16,15 +143,21 @@ def blur(surface, strength=7, scale=0.5):
 
 N = config.count
 
+
+
 class Simulation:
     def __init__(self):
         """Initialisation of Simulation environment"""
         self.positions = np.random.rand(N, 2) * np.array([WIDTH, HEIGHT])  #the positions of all the particles
         self.velocities = np.zeros((N, 2))  #the velocities of all the particles
         self.particles = np.random.randint(0, len(colours), size=N)  #the particle types - determines their nature towards each other
-        self.attraction_matrix = np.zeros((len(colours), len(colours)))  #the attraction matrix - determines how one type interacts with another
+        #result_matrix = construct_matrix_from_csv(self.file)
+        #self.attraction_matrix = np.zeros((len(colours), len(colours)))  #the attraction matrix - determines how one type interacts with another
+        self.attraction_matrix=construct_matrix_from_csv(r"D:\Vscode\python_code\UCUG1505_FInal_Project\lucky\lucky.csv")
+
         self.grid = Grid(WIDTH, HEIGHT, 2 * config.influence)  #the grid - spacial partitioning technique to optimise detection of nearby particles
         self.running=True
+        #self.file=r"D:\Vscode\python_code\UCUG1505_FInal_Project\lucky\lucky.csv"
 
     @njit()  #numba's just-in-time compiler decorator
     def force(pos_a, pos_b, type_a, type_b, attraction_matrix, influence, beta=0.3):
