@@ -20,10 +20,10 @@ colours = [(39, 55, 77), (82, 109, 130), (157, 178, 191), (221, 230, 237),(136, 
 from dataclasses import dataclass
 @dataclass(frozen=True)
 class _:
-    count: int = 500 #number of particles
+    count: int = 700 #number of particles
     radius: int = 2 #radius of particle
 
-    dt: float = 0.05 #the time step of the simulation
+    dt: float = 0.01 #the time step of the simulation
 
     damping: float = 1 #time for velocity to half due to friction
 
