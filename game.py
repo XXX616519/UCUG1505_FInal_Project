@@ -45,7 +45,7 @@ class Game:
         """
         ret, frame = cap.read()
         if not ret:
-            print("无法读取摄像头画面")
+            print("Can't read from the camera")
             return None
 
         # 转换颜色空间并镜像
@@ -132,7 +132,7 @@ class Game:
                         if angle>360:
                             angle %= 360
                         #self.update_sprites(angle)
-                        print("检测到握拳，发射小球= ",angle)
+                        #print("检测到握拳，发射小球= ",angle)
                         self.level.shooting_manager.shoot(angle)
                 else :
                     self.level.player.set_mouse_control()
