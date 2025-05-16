@@ -67,18 +67,18 @@ class Player(pygame.sprite.Sprite):
 
     def update(self, passangle):
         if not self.use_gesture_control:
-            # 鼠标控制模式（增加-90度补偿）
+            # 鼠标控制模式（保持原有逻辑）
             mouse_x, mouse_y = pygame.mouse.get_pos()
             rel_x = mouse_x - self.rect.centerx
             rel_y = mouse_y - self.rect.centery
             raw_angle = math.degrees(math.atan2(-rel_y, rel_x)) % 360
-            self.angle = (raw_angle + 90) % 360  # 新增-90度补偿
+            self.angle = (raw_angle + 90) % 360  # 补偿旋转偏移
         else:
-            # 保持手势控制原有逻辑
-            self.angle = passangle % 360
+            # 手势控制模式直接使用传入角度（已包含补偿）
+            self.angle = (passangle + 90) % 360
             
         # 统一方向向量计算（保持原有逻辑）
-        angle_rad = math.radians(self.angle + 90)  # 补偿旋转偏移
+        angle_rad = math.radians(self.angle)  # 移除之前的+90补偿
         self.shoot_direction = (math.cos(angle_rad), -math.sin(angle_rad))
         
         # 更新图像旋转

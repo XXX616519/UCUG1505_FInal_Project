@@ -59,10 +59,10 @@ class Shoot:
 
             # 根据 target 类型设置目标，并计算射击的角度
             if isinstance(target, (int, float)):
-                # 如果 target 为角度数值，则归一化到 [0,360)
                 shot_angle = target % 360
                 angle_rad = math.radians(shot_angle)
-                direction = (math.cos(angle_rad), math.sin(angle_rad))
+                # 修正Y轴方向（与Player类保持一致）
+                direction = (math.cos(angle_rad), -math.sin(angle_rad))  # 添加负号
                 target_point = (
                     shooting_ball.pos[0] + direction[0] * 1000,
                     shooting_ball.pos[1] + direction[1] * 1000

@@ -153,7 +153,7 @@ class Simulation:
         self.particles = np.random.randint(0, len(colours), size=N)  #the particle types - determines their nature towards each other
         #result_matrix = construct_matrix_from_csv(self.file)
         #self.attraction_matrix = np.zeros((len(colours), len(colours)))  #the attraction matrix - determines how one type interacts with another
-        self.attraction_matrix=construct_matrix_from_csv(r"D:\Vscode\python_code\UCUG1505_FInal_Project\lucky\lucky.csv")
+        self.attraction_matrix=construct_matrix_from_csv(r"D:\PDF\UCUG1505_FInal_Project\lucky\lucky.csv")
 
         self.grid = Grid(WIDTH, HEIGHT, 2 * config.influence)  #the grid - spacial partitioning technique to optimise detection of nearby particles
         self.running=True
