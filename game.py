@@ -12,6 +12,7 @@ from src.ui.ui_gen import UiManager
 from src.ui import *
 from src.Level import Level
 from src.Constants import WIDTH, HEIGHT, FPS, SCREEN_CENTER
+from win_animation.simulation import Simulation
 
 # 初始化摄像头
 cap = cv2.VideoCapture(0)
@@ -149,6 +150,7 @@ class Game:
                 self.handle_lose()
 
     def handle_win(self):
+        Simulation().run()
         if self.level_num == 3:
             self.win_game()
         else:
