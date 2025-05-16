@@ -125,14 +125,12 @@ class Game:
                 angle=0
                 if gesture:
                     angle, is_fist = gesture
+                    # 将手势的720范围转换为360度（保持与鼠标相同的角度范围）
+                    angle = (angle / 2) % 360  # 关键修改：720→360转换
                     # 更新玩家旋转角度
                     self.level.player.set_gesture_angle(angle)
                     # 当检测到握拳时立即触发射击动作
                     if is_fist:
-                        if angle>360:
-                            angle %= 360
-                        #self.update_sprites(angle)
-                        #print("检测到握拳，发射小球= ",angle)
                         self.level.shooting_manager.shoot(angle)
                 else :
                     self.level.player.set_mouse_control()

@@ -65,34 +65,26 @@ class Player(pygame.sprite.Sprite):
         return False
 
 
-    def update(self,passangle):
+    def update(self, passangle):
         if not self.use_gesture_control:
-            # 鼠标控制模式
+            # 鼠标控制模式（增加-90度补偿）
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            rel_x = mouse_x - self.rect.x
-            rel_y = mouse_y - self.rect.y
-            self.angle = (180 / math.pi) * (-math.atan2(rel_y, rel_x)) + 90
+            rel_x = mouse_x - self.rect.centerx
+            rel_y = mouse_y - self.rect.centery
+            raw_angle = math.degrees(math.atan2(-rel_y, rel_x)) % 360
+            self.angle = (raw_angle + 90) % 360  # 新增-90度补偿
         else:
-            # 手势控制模式
-            #self.angle = self.gesture_target_angle
-            self.angle=passangle
-
-        # 更新图像旋转
-        if self.angle > 360 : 
-            res=self.angle % 360
-            self.angle=res
+            # 保持手势控制原有逻辑
+            self.angle = passangle % 360
+            
+        # 统一方向向量计算（保持原有逻辑）
+        angle_rad = math.radians(self.angle + 90)  # 补偿旋转偏移
+        self.shoot_direction = (math.cos(angle_rad), -math.sin(angle_rad))
         
+        # 更新图像旋转
         self.image = pygame.transform.rotate(self.original_image, self.angle)
-        #self.image=rotate_image(self.original_image, self.angle)
-        print("selfangle= ",self.angle)
         self.image.set_colorkey(BLACK)
         self.rect = self.image.get_rect(center=self.pos)
-
-        # 根据当前角度更新射击方向
-        # angle_rad = math.radians(self.angle)
-        # print("anglerad= ",angle_rad)
-        # self.shoot = [math.cos(angle_rad), math.sin(angle_rad)]
-        # print("shootdi= ",self.shoot)
 
     def set_gesture_angle(self, angle):
         """设置手势控制的角度"""
