@@ -5,3 +5,4 @@ numpy
 mediapipe
 opencv
 pygame
+noise

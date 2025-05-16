@@ -6,8 +6,21 @@ import pandas as pd
 from PIL import Image, ImageFilter
 import pygame
 import sys
+import random
+import os
 from datetime import datetime
+from noise import pnoise2
 
+
+background_config = {
+    "noise_scale": 0.02,    # 噪声缩放比例
+    "octaves": 4,           # 噪声倍频次数
+    "persistence": 0.5,     # 噪声持久度
+    "lacunarity": 2.0,      # 噪声间隙
+    "base": random.randint(0, 1000),  # 随机基准值
+    "cloud_color1": (25, 25, 50),     # 深空蓝
+    "cloud_color2": (15, 15, 155)   # 云朵蓝
+}
 
 
 def parse_color(color_str):
@@ -158,6 +171,80 @@ class Simulation:
         self.grid = Grid(WIDTH, HEIGHT, 2 * config.influence)  #the grid - spacial partitioning technique to optimise detection of nearby particles
         self.running=True
         #self.file=r"D:\Vscode\python_code\UCUG1505_FInal_Project\lucky\lucky.csv"
+        self.background_images = self._load_background_images(r"D:\Vscode\python_code\UCUG1505_FInal_Project\assets\background")  # 替换为你的图片文件夹路径
+        self.bg_image = self._select_random_image()
+        self.noise_bg = self.generate_perlin_background()
+        # 合成背景
+        self.static_background = self._create_composite_bg()
+    def _load_background_images(self, folder_path):
+        """加载指定目录下的所有图片"""
+        valid_exts = [".png", ".jpg", ".jpeg"]
+        images = []
+        for filename in os.listdir(folder_path):
+            if os.path.splitext(filename)[1].lower() in valid_exts:
+                try:
+                    img = pygame.image.load(os.path.join(folder_path, filename))
+                    images.append(img)
+                except Exception as e:
+                    print(f"加载图片失败 {filename}: {str(e)}")
+        return images
+    
+    def _select_random_image(self):
+        """随机选择一张背景图片"""
+        if not self.background_images:
+            return None
+            
+        img = random.choice(self.background_images)
+        # 调整图片大小适应窗口
+        img = pygame.transform.scale(img, (WIDTH, HEIGHT))
+        # 设置随机透明度（40%-80%）
+        img.set_alpha(random.randint(100, 200))
+        return img
+
+    def generate_perlin_background(self):
+        """生成柏林噪声纹理表面"""
+        surface = pygame.Surface((WIDTH, HEIGHT))
+        for x in range(WIDTH):
+            for y in range(HEIGHT):
+                # 计算柏林噪声值
+                noise_value = pnoise2(
+                    x * background_config["noise_scale"],
+                    y * background_config["noise_scale"],
+                    octaves=background_config["octaves"],
+                    persistence=background_config["persistence"],
+                    lacunarity=background_config["lacunarity"],
+                    base=background_config["base"]
+                )
+                # 将噪声值映射到颜色渐变
+                t = (noise_value + 1) / 2  # 归一化到0-1
+                r = int(background_config["cloud_color1"][0] * (1-t) + background_config["cloud_color2"][0] * t)
+                g = int(background_config["cloud_color1"][1] * (1-t) + background_config["cloud_color2"][1] * t)
+                b = int(background_config["cloud_color1"][2] * (1-t) + background_config["cloud_color2"][2] * t)
+                surface.set_at((x, y), (r, g, b))
+        return surface
+    
+    def _create_composite_bg(self):
+        """合成最终静态背景"""
+        # 创建底色
+        composite = pygame.Surface((WIDTH, HEIGHT))
+        composite.fill(background_config["cloud_color1"])
+        
+        # 叠加柏林噪声
+        composite.blit(self.noise_bg, (0, 0))
+        
+        # 叠加图片（如果有）
+        if self.bg_image:
+            # 随机偏移位置（-50到50像素）
+            offset = (
+                random.randint(-50, 50),
+                random.randint(-50, 50)
+            )
+            composite.blit(self.bg_image, offset)
+        
+        return composite
+
+    
+    
 
     @njit()  #numba's just-in-time compiler decorator
     def force(pos_a, pos_b, type_a, type_b, attraction_matrix, influence, beta=0.3):
@@ -257,7 +344,8 @@ class Simulation:
         menu = False  #menu to change attraction values
         #runnning =True
         while self.running:
-            screen.fill(background)
+            #screen.fill(background)
+            screen.blit(self.static_background, (0, 0))
             clock.tick(fps)
             scroll = 0  #value of scroll
             for event in pygame.event.get():

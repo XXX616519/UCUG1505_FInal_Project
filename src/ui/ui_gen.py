@@ -228,7 +228,10 @@ class UiManager:
             pygame.image.load("assets/images/grass1.png"),
             pygame.image.load("assets/images/grass2.png"),
             pygame.image.load("assets/images/grass3.png"),
-            pygame.image.load("assets/images/grass4.png")
+            pygame.image.load("assets/images/grass4.png"),
+            pygame.image.load("assets/images/grass5.png"),
+            pygame.image.load("assets/images/grass6.png"),
+            pygame.image.load("assets/images/grass7.png"),
         ]
 
     def draw_grass(self):
