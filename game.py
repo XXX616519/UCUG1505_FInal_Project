@@ -85,8 +85,8 @@ class Game:
             # current_y = int(wrist.y * HEIGHT)
 
             # 根据手腕横坐标计算旋转角度（0-360 度）
-            rotation_angle = int((current_x / WIDTH) * 720)
-            rotation_angle = max(0, min(720, rotation_angle))
+            rotation_angle = int((current_x / WIDTH) * 360)
+            rotation_angle = max(0, min(360, rotation_angle))
 
             # 判断是否为握拳（除了拇指之外，其他四指的指尖与手腕的距离是否都较小）
             def distance(a, b):
@@ -113,7 +113,7 @@ class Game:
     def play(self):
         self.continue_game(self.ui_manager.start_game_btn,
                            self.ui_manager.start_game_display)
-        with open(r"D:\Vscode\python_code\UCUG1505_FInal_Project\lucky\lucky.csv", "w") as f:
+        with open(r"D:\PDF\UCUG1505_FInal_Project\lucky\lucky.csv", "w") as f:
             f.write("")  # 完全清空文件（包括表头）
         while not self.is_quit:
             self.setup_new_game()
@@ -149,8 +149,8 @@ class Game:
                 angle=0
                 if gesture:
                     angle, is_fist = gesture
-                    # 将手势的720范围转换为360度（保持与鼠标相同的角度范围）
-                    angle = (angle / 2) % 360  # 关键修改：720→360转换
+                    # 移除之前的720→360转换，直接使用角度并应用90度补偿
+                    angle = (angle + 90) % 360  # 新增90度补偿与鼠标控制对齐
                     # 更新玩家旋转角度
                     self.level.player.set_gesture_angle(angle)
                     # 当检测到握拳时立即触发射击动作
