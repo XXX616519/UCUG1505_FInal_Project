@@ -1,0 +1,7 @@
+numba
+pillow
+pygame
+numpy
+mediapipe
+opencv
+pygame

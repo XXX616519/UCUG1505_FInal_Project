@@ -27,13 +27,13 @@ class Shoot:
 
         # 设置保存 csv 的文件夹与文件
         self.log_dir = "lucky"
-        self.csv_log_file = os.path.join(self.log_dir, "lucky.csv")
+        self.csv_log_file = os.path.join(self.log_dir, f"lucky.csv")
         os.makedirs(self.log_dir, exist_ok=True)
         # 如果 csv 文件不存在，则写入表头（时间、角度、颜色）
-        if not os.path.exists(self.csv_log_file):
-            with open(self.csv_log_file, mode="w", newline="") as file:
-                writer = csv.writer(file)
-                writer.writerow(["time", "angle", "color"])
+        #if not os.path.exists(self.csv_log_file):
+        with open(self.csv_log_file, mode="w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(["time", "angle", "color"])
 
         # 加载声音和图片
         self.explosion_sound = pygame.mixer.Sound("assets/sounds/explosion.wav")
@@ -43,36 +43,39 @@ class Shoot:
         """
         射击方法
          - target 可以是角度（手势控制）或鼠标坐标。
-         - 射击时会记录射击的时间、角度、颜色到 shot_log 以及写入 lucky/lucky.csv 文件中，列为：time, angle, color。
+         - 射击时会记录射击的时间、角度、颜色到 shot_log 以及写入 lucky/lucky.csv 文件中列为time, angle, color。
         """
         # 控制连续射击的时间间隔（微秒），防止短时间内重复发射
         if len(self.shooting_balls) == 0 or self.speed or \
                 (datetime.datetime.now() - self.shooting_balls[-1].time).microseconds > 300000:
             
             shooting_ball = self.charged_ball
-            shooting_ball.pos = self.player.get_shoot_pos()
-            print("Shooting ball location: ", shooting_ball.pos)
+            # 固定位置（可根据需要改为 self.player.get_shoot_pos()）
+            shooting_ball.pos = (530, 330)
+            #print("Shooting ball 发射位置: ", shooting_ball.pos)
 
             # 记录射击时间
             shot_time = datetime.datetime.now()
 
-            # 统一处理逻辑：无论输入类型，最终都转换为坐标目标
-            if isinstance(target, (int, float)):  # 手势控制
-                # 增加-90度补偿贴图方向偏移
-                adjusted_angle = (target - 90) % 360
-                angle_rad = math.radians(adjusted_angle)
-                direction = (math.cos(angle_rad), -math.sin(angle_rad))
+            # 根据 target 类型设置目标，并计算射击的角度
+            if isinstance(target, (int, float)):
+                # 如果 target 为角度数值，则归一化到 [0,360)
+                shot_angle = target % 360
+                angle_rad = math.radians(shot_angle)
+                direction = (math.cos(angle_rad), math.sin(angle_rad))
                 target_point = (
                     shooting_ball.pos[0] + direction[0] * 1000,
                     shooting_ball.pos[1] + direction[1] * 1000
                 )
                 shooting_ball.set_target(target_point)
-                shot_angle = adjusted_angle
-            else:  # 鼠标控制模式（保持原有逻辑）
+            else:
+                # 如果 target 为坐标，则根据坐标计算角度
                 dx = target[0] - shooting_ball.pos[0]
                 dy = target[1] - shooting_ball.pos[1]
                 angle_rad = math.atan2(dy, dx)
-                shot_angle = math.degrees(angle_rad) % 360
+                shot_angle = math.degrees(angle_rad)
+                if shot_angle < 0:
+                    shot_angle += 360
                 shooting_ball.set_target(target)
 
             shooting_ball.set_time(shot_time)
@@ -91,7 +94,7 @@ class Shoot:
                 "angle": shot_angle
             }
             self.shot_log.append(log_entry)
-            print(f"Shooting log entry: Time: {shot_time}, Time Gap: {time_interval}s, Color: {shooting_ball.color}, Angel: {shot_angle}")
+            #print(f"记录射击日志 => 时间: {shot_time}, 时间间隔: {time_interval}s, 颜色: {shooting_ball.color}, 角度: {shot_angle}")
 
             # 将本次射击的数据写入 CSV 文件（写入字段：时间、角度、颜色）
             with open(self.csv_log_file, mode='a', newline='') as file:

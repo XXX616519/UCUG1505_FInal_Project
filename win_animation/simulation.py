@@ -15,6 +15,7 @@ def blur(surface, strength=7, scale=0.5):
     return pygame.transform.scale(pygame.image.fromstring(blurred.tobytes(), size, "RGB"), (WIDTH, HEIGHT))  #converts the image into a pygame Surface and scales up
 
 N = config.count
+
 class Simulation:
     def __init__(self):
         """Initialisation of Simulation environment"""
@@ -23,7 +24,8 @@ class Simulation:
         self.particles = np.random.randint(0, len(colours), size=N)  #the particle types - determines their nature towards each other
         self.attraction_matrix = np.zeros((len(colours), len(colours)))  #the attraction matrix - determines how one type interacts with another
         self.grid = Grid(WIDTH, HEIGHT, 2 * config.influence)  #the grid - spacial partitioning technique to optimise detection of nearby particles
-    
+        self.running=True
+
     @njit()  #numba's just-in-time compiler decorator
     def force(pos_a, pos_b, type_a, type_b, attraction_matrix, influence, beta=0.3):
         """Calculates the force between two particles"""
@@ -120,14 +122,18 @@ class Simulation:
     def run(self):
         """Runs the main simulation loop; handling events, updates and rendering"""
         menu = False  #menu to change attraction values
-        while 1:
+        #runnning =True
+        while self.running:
             screen.fill(background)
             clock.tick(fps)
             scroll = 0  #value of scroll
             for event in pygame.event.get():
                 if event.type == pygame.QUIT or event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:  #quit program if ESC key pressed
-                    pygame.quit()
-                    sys.exit() 
+                    # pygame.quit()
+                    # sys.exit()
+                    self.running=False
+                    return
+                 
                 if event.type == pygame.MOUSEBUTTONDOWN:  #if the mouse is pressed down
                     if event.button == 1: menu = not menu  #toggle menu
                 if event.type == pygame.MOUSEWHEEL: scroll += event.y / 50  #amount to change attraction factor by
