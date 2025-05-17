@@ -4,6 +4,8 @@ import mediapipe as mp
 import os
 import shutil
 import time
+from vosk import Model, KaldiRecognizer
+import pyaudio
 from src.Path import Path
 from src.Sprites import *
 from src.Generate_Ball import Generate_Ball
@@ -59,6 +61,18 @@ class Game:
         self.setup_new_game()
         self.is_quit = False
         self.is_paused = False
+        self.voice_model = Model("D:/PDF/UCUG1505_FInal_Project/model/vosk-model-small-en-us-0.15")  # 确保下载并解压 vosk 模型到 "model" 文件夹
+        self.recognizer = KaldiRecognizer(self.voice_model, 16000)
+        self.audio_stream = pyaudio.PyAudio().open(
+            format=pyaudio.paInt16,
+            channels=1,
+            rate=16000,
+            input=True,
+            frames_per_buffer=4000
+        )
+        self.audio_stream.start_stream()
+        self.control_mode = None  # 控制模式："mouse", "gesture", "voice"
+        self.voice_angle = 0  # 语音控制当前角度
 
     def get_gesture_shoot_target(self):
         """
@@ -110,11 +124,24 @@ class Game:
             #print("未检测到手部")
             return None
 
+    def listen_for_voice_command(self):
+        """
+        使用 vosk 捕获用户命令。
+        """
+        try:
+            data = self.audio_stream.read(4000, exception_on_overflow=False)
+            if self.recognizer.AcceptWaveform(data):
+                result = self.recognizer.Result()
+                self.voice_command = eval(result).get("text", "").lower()
+                print(f"Recognized command: {self.voice_command}")
+            else:
+                self.voice_command = None
+        except Exception as e:
+            print(f"Error during voice recognition: {e}")
+            self.voice_command = None
+
     def play(self):
-        self.continue_game(self.ui_manager.start_game_btn,
-                           self.ui_manager.start_game_display)
-        with open(r"D:\PDF\UCUG1505_FInal_Project\lucky\lucky.csv", "w") as f:
-            f.write("")  # 完全清空文件（包括表头）
+        self.show_start_menu()
         while not self.is_quit:
             self.setup_new_game()
             self.play_game()
@@ -123,45 +150,103 @@ class Game:
     def setup_new_game(self):
         self.level = Level(self.level_num, self.score_manager)
         self.ui_manager = UiManager(self.screen, self.level)
+        self.voice_angle = self.level.player.angle  # 重置语音角度为初始角度
+        # 保留已选择的控制模式，不重置
 
-    def play_game(self):
-        game_finished = False
+    def show_start_menu(self):
+        """显示开始菜单，选择控制模式"""
+        start_menu_active = True
+        while start_menu_active and not self.is_quit:
+            self.screen.fill((0, 0, 0))
+            self.ui_manager.draw_start_menu_buttons()
+            pygame.display.update()
 
-        while not game_finished and not self.is_quit:
-            self.level.ball_generator.generate()
-            self.clock.tick(FPS)
-            
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.is_quit = True
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     mouse_pos = pygame.mouse.get_pos()
+                    if self.ui_manager.mouse_control_btn.collidepoint(mouse_pos):
+                        self.control_mode = "mouse"
+                        start_menu_active = False
+                    elif self.ui_manager.gesture_control_btn.collidepoint(mouse_pos):
+                        self.control_mode = "gesture"
+                        start_menu_active = False
+                    elif self.ui_manager.voice_control_btn.collidepoint(mouse_pos):
+                        self.control_mode = "voice"
+                        start_menu_active = False
+
+    def play_game(self):
+        game_finished = False
+
+        while not game_finished and not self.is_quit:
+            # 确保在不同控制模式下正确设置玩家控制标志
+            if self.control_mode == "mouse":
+                self.level.player.set_mouse_control()
+            elif self.control_mode == "gesture":
+                # 始终启用手势控制，禁用鼠标控制
+                self.level.player.use_gesture_control = True
+            elif self.control_mode == "voice":
+                # 语音模式也禁用鼠标控制
+                self.level.player.use_gesture_control = True
+
+            self.level.ball_generator.generate()
+            self.clock.tick(FPS)
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.is_quit = True
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse_pos = pygame.mouse.get_pos()
+                    # 一直允许点击暂停、重启和切换模式按钮
                     if self.ui_manager.pause_btn.rect.collidepoint(mouse_pos):
                         self.is_paused = not self.is_paused
                     elif self.ui_manager.restart_btn.rect.collidepoint(mouse_pos):
                         self.setup_new_game()
                         self.score_manager.setup_next_level()
+                    elif self.ui_manager.change_mode_btn.rect.collidepoint(mouse_pos):
+                        # 弹出控制模式选择菜单，保持当前关卡
+                        self.show_start_menu()
                     else:
-                        self.level.shooting_manager.shoot(mouse_pos)
+                        # 仅在鼠标模式下允许射击
+                        if self.control_mode == "mouse":
+                            self.level.shooting_manager.shoot(mouse_pos)
 
             if not self.is_paused:
-                gesture = self.get_gesture_shoot_target()
-                angle=0
-                if gesture:
-                    angle, is_fist = gesture
-                    # 移除之前的720→360转换，直接使用角度并应用90度补偿
-                    angle = (angle + 90) % 360  # 新增90度补偿与鼠标控制对齐
-                    # 更新玩家旋转角度
-                    self.level.player.set_gesture_angle(angle)
-                    # 当检测到握拳时立即触发射击动作
-                    if is_fist:
-                        self.level.shooting_manager.shoot(angle)
-                else :
+                if self.control_mode == "mouse":
                     self.level.player.set_mouse_control()
+                    angle_to_update = None
 
-                if angle>360:
-                    angle%=360
-                self.update_sprites(angle)
+                elif self.control_mode == "gesture":
+                    gesture = self.get_gesture_shoot_target()
+                    if gesture:
+                        angle, is_fist = gesture
+                        angle = (angle + 90) % 360
+                        self.level.player.set_gesture_angle(angle)
+                        if is_fist:
+                            self.level.shooting_manager.shoot(angle)
+                    angle_to_update = angle if gesture else None
+
+                elif self.control_mode == "voice":
+                    self.listen_for_voice_command()
+                    angle = self.level.player.get_current_angle()
+                    if self.voice_command == "left":
+                        angle = (angle - 20) % 360
+                        self.level.player.set_voice_angle(angle - 90)
+                    elif self.voice_command == "right":
+                        angle = (angle + 20) % 360
+                        self.level.player.set_voice_angle(angle - 90)
+                    elif self.voice_command == "shoot":
+                        self.level.shooting_manager.shoot(angle - 90)
+                    # 未识别 left/right/shoot 时，不改变 angle
+                    self.voice_command = None
+                    angle_to_update = self.level.player.get_current_angle()
+
+                else:
+                    angle_to_update = None
+
+                # 更新精灵状态
+                self.update_sprites(angle_to_update)
 
             self.update_display(self.ui_manager.game_display)
 
@@ -227,7 +312,11 @@ class Game:
             self.update_display(self.ui_manager.win_game_display)
 
     def update_sprites(self,angle):
-        self.level.player.update(angle)
+        # 在 update_sprites 方法中添加对 None 值的检查，避免将 None 传递给 Player.update 方法
+        if angle is not None:
+            self.level.player.update(angle)
+        else:
+            self.level.player.update(0)  # 默认角度为 0
         self.level.shooting_manager.update()
         self.level.ball_generator.update()
         self.level.bonus_manager.update()

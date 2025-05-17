@@ -92,6 +92,8 @@ class UiManager:
         # 先初始化按钮
         self.pause_btn = Button('Pause', (WIDTH-60, 40), small=True)
         self.restart_btn = Button('Restart', (60, 40), small=True)
+        # 新增：切换控制模式按钮（位于顶部中央）
+        self.change_mode_btn = Button('Change Mode', (WIDTH//2, 40), small=True)
 
         # 再初始化其他组件
         self.load_grass_images()
@@ -128,7 +130,7 @@ class UiManager:
             gradient_colors=[(173, 216, 230), (135, 206, 250)],
             sprites=[sprite for sprite in sprites],  # 现在包含所有必要元素
             labels=[self.level_label],
-            buttons=[self.pause_btn, self.restart_btn]
+            buttons=[self.pause_btn, self.restart_btn, self.change_mode_btn]
         )
 
         self.continue_btn = Button('Continue', SCREEN_CENTER)
@@ -239,30 +241,44 @@ class UiManager:
             final_img = pygame.transform.rotozoom(img, angle, scale)
             self.screen.blit(final_img, (x, y))
 
-class Ball:
-    def draw(self, surface):
-        # 添加光晕效果（仅普通球）
-        if self.type == BallType.Normal:
-            glow = pygame.Surface((self.radius*4, self.radius*4), pygame.SRCALPHA)
-            pygame.draw.circle(glow, (*self.color, 50), (self.radius*2, self.radius*2), self.radius*2)
-            surface.blit(glow, (self.x - self.radius*2, self.y - self.radius*2))
-        
-        # 基础球体（带渐变效果）
-        gradient = pygame.Surface((self.radius*2, self.radius*2), pygame.SRCALPHA)
-        pygame.draw.circle(gradient, self.color, (self.radius, self.radius), self.radius)
-        
-        # 添加高光效果
-        highlight_pos = (self.radius//2, self.radius//2)
-        pygame.draw.circle(gradient, (255, 255, 255, 150), highlight_pos, self.radius//3)
-        
-        # 添加动态旋转效果（仅轨道球）
-        if hasattr(self, 'on_track'):
-            rotated = pygame.transform.rotate(gradient, pygame.time.get_ticks()//10 % 360)
-            surface.blit(rotated, (self.x - self.radius, self.y - self.radius))
-        else:
-            surface.blit(gradient, (self.x - self.radius, self.y - self.radius))
-
-        # 特殊球保持原贴纸（不需要修改）
-        if self.type != BallType.Normal:
-            # 原有贴图绘制逻辑保持不变
-            surface.blit(self.texture, (self.x - self.radius, self.y - self.radius))
+    def draw_start_menu_buttons(self):
+        # 绘制背景图
+        try:
+            bg = pygame.image.load(r"assets/background/Paris.jpg").convert()
+            bg = pygame.transform.scale(bg, (WIDTH, HEIGHT))
+            self.screen.blit(bg, (0, 0))
+        except Exception:
+            pass
+        # 渐变背景覆盖
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((*BLACK, 200))
+        self.screen.blit(overlay, (0, 0))
+        # 标题
+        font_title = pygame.font.Font(None, 64)
+        title_surf = font_title.render("Select Control Mode", True, WHITE)
+        title_rect = title_surf.get_rect(center=(WIDTH//2, HEIGHT//4))
+        self.screen.blit(title_surf, title_rect)
+        # 按钮样式
+        btn_font = pygame.font.Font(None, 36)
+        btn_w, btn_h = BTN_WIDTH, BTN_HEIGHT
+        start_y = HEIGHT//2
+        gap = btn_h + 20
+        mouse_pos = pygame.mouse.get_pos()
+        # 鼠标控制按钮
+        self.mouse_control_btn = pygame.Rect((WIDTH-btn_w)//2, start_y, btn_w, btn_h)
+        color_mouse = RED if not self.mouse_control_btn.collidepoint(mouse_pos) else (255, 100, 100)
+        pygame.draw.rect(self.screen, color_mouse, self.mouse_control_btn, border_radius=8)
+        txt = btn_font.render("Mouse Control", True, WHITE)
+        self.screen.blit(txt, txt.get_rect(center=self.mouse_control_btn.center))
+        # 手势控制按钮
+        self.gesture_control_btn = pygame.Rect((WIDTH-btn_w)//2, start_y+gap, btn_w, btn_h)
+        color_gesture = GREEN if not self.gesture_control_btn.collidepoint(mouse_pos) else (100, 255, 100)
+        pygame.draw.rect(self.screen, color_gesture, self.gesture_control_btn, border_radius=8)
+        txt = btn_font.render("Gesture Control", True, WHITE)
+        self.screen.blit(txt, txt.get_rect(center=self.gesture_control_btn.center))
+        # 语音控制按钮
+        self.voice_control_btn = pygame.Rect((WIDTH-btn_w)//2, start_y+2*gap, btn_w, btn_h)
+        color_voice = BLUE if not self.voice_control_btn.collidepoint(mouse_pos) else (100, 100, 255)
+        pygame.draw.rect(self.screen, color_voice, self.voice_control_btn, border_radius=8)
+        txt = btn_font.render("Voice Control", True, WHITE)
+        self.screen.blit(txt, txt.get_rect(center=self.voice_control_btn.center))
