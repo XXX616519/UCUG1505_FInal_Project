@@ -124,7 +124,7 @@ class Finish(pygame.sprite.Sprite):
         self.score_manager = score_manager
 
         self.image = pygame.transform.smoothscale(
-            pygame.image.load("assets/images/star.png"), (80, 80))
+            pygame.image.load("assets/images/endpoint.png"), (80, 80))
         self.image.set_colorkey(BLACK)
         self.rect = self.image.get_rect(center=path.positions[-1])
 

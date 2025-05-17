@@ -221,23 +221,21 @@ class UiManager:
         self.screen.blit(label.text, (label.text_x, label.text_y))
 
     def load_grass_images(self):
-        """
-        加载草地图片。
-        """
         self.grass_images = [
-            pygame.image.load("assets/images/grass1.png"),
-            pygame.image.load("assets/images/grass2.png"),
-            pygame.image.load("assets/images/grass3.png"),
-            pygame.image.load("assets/images/grass4.png")
+            pygame.image.load("assets/images/background_1.png"),
+            pygame.image.load("assets/images/background_2.png"),
+            pygame.image.load("assets/images/background_3.png"),
+            pygame.image.load("assets/images/background_4.png"),
+            pygame.image.load("assets/images/background_5.png"),
+            pygame.image.load("assets/images/background_6.png"),
+            pygame.image.load("assets/images/background_7.png"),
+            pygame.image.load("assets/images/background_8.png")
         ]
 
     def draw_grass(self):
-        """
-        绘制固定背景草地
-        """
+
         for pos in self.grass_positions:
             x, y, img, angle, scale = pos
-            # 使用预先生成的参数
             final_img = pygame.transform.rotozoom(img, angle, scale)
             self.screen.blit(final_img, (x, y))
 
