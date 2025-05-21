@@ -31,6 +31,9 @@ hands = mp_hands.Hands(
     min_tracking_confidence=0.5
 )
 
+project_root = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(project_root, "model", "vosk-model-small-en-us-0.15")
+
 
 def clear_folder(folder_path):
     if not os.path.exists(folder_path):
@@ -61,7 +64,7 @@ class Game:
         self.setup_new_game()
         self.is_quit = False
         self.is_paused = False
-        self.voice_model = Model("D:/PDF/UCUG1505_FInal_Project/model/vosk-model-small-en-us-0.15")  # 确保下载并解压 vosk 模型到 "model" 文件夹
+        self.voice_model = Model(model_path)  # 确保下载并解压 vosk 模型到 "model" 文件夹
         self.recognizer = KaldiRecognizer(self.voice_model, 16000)
         self.audio_stream = pyaudio.PyAudio().open(
             format=pyaudio.paInt16,
