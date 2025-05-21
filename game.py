@@ -73,6 +73,7 @@ class Game:
         self.audio_stream.start_stream()
         self.control_mode = None  # 控制模式："mouse", "gesture", "voice"
         self.voice_angle = 0  # 语音控制当前角度
+        # self.keyboard_target_angle = 0  # 键盘控制当前角度
 
     def get_gesture_shoot_target(self):
         """
@@ -175,11 +176,19 @@ class Game:
                     elif self.ui_manager.voice_control_btn.collidepoint(mouse_pos):
                         self.control_mode = "voice"
                         start_menu_active = False
+                    elif self.ui_manager.keyboard_control_btn.collidepoint(mouse_pos):
+                        self.control_mode = "keyboard"
+                        start_menu_active = False
 
     def play_game(self):
         game_finished = False
 
         while not game_finished and not self.is_quit:
+            # 处理键盘控制初始设置
+            if self.control_mode == "keyboard":
+                # 切换到键盘控制，保持当前角度
+                self.level.player.set_keyboard_angle(self.level.player.get_current_angle())
+
             # 确保在不同控制模式下正确设置玩家控制标志
             if self.control_mode == "mouse":
                 self.level.player.set_mouse_control()
@@ -196,6 +205,17 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.is_quit = True
+                # 键盘事件处理
+                elif event.type == pygame.KEYDOWN and self.control_mode == "keyboard":
+                    if event.key == pygame.K_a:
+                        new_angle = (self.level.player.get_current_angle() - 20) % 360
+                        self.level.player.set_keyboard_angle(new_angle)
+                    elif event.key == pygame.K_d:
+                        new_angle = (self.level.player.get_current_angle() + 20) % 360
+                        self.level.player.set_keyboard_angle(new_angle)
+                    elif event.key == pygame.K_SPACE:
+                        angle = self.level.player.get_current_angle()
+                        self.level.shooting_manager.shoot(angle)
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     mouse_pos = pygame.mouse.get_pos()
                     # 一直允许点击暂停、重启和切换模式按钮
@@ -241,6 +261,10 @@ class Game:
                     # 未识别 left/right/shoot 时，不改变 angle
                     self.voice_command = None
                     angle_to_update = self.level.player.get_current_angle()
+
+                elif self.control_mode == "keyboard":
+                    # 键盘模式下使用已有角度，无需额外操作
+                    angle_to_update = None
 
                 else:
                     angle_to_update = None

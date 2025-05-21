@@ -282,3 +282,9 @@ class UiManager:
         pygame.draw.rect(self.screen, color_voice, self.voice_control_btn, border_radius=8)
         txt = btn_font.render("Voice Control", True, WHITE)
         self.screen.blit(txt, txt.get_rect(center=self.voice_control_btn.center))
+        # 新增：键盘控制按钮
+        self.keyboard_control_btn = pygame.Rect((WIDTH-btn_w)//2, start_y+3*gap, btn_w, btn_h)
+        color_keyboard = GREY if not self.keyboard_control_btn.collidepoint(mouse_pos) else (180, 180, 180)
+        pygame.draw.rect(self.screen, color_keyboard, self.keyboard_control_btn, border_radius=8)
+        txt = btn_font.render("Keyboard Control", True, WHITE)
+        self.screen.blit(txt, txt.get_rect(center=self.keyboard_control_btn.center))
