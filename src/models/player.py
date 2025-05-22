@@ -33,7 +33,7 @@ class Player(pygame.sprite.Sprite):
         self.use_gesture_control = False  # 默认使用鼠标控制
         self.use_voice_control = False  # 默认未启用语音控制
         self.use_keyboard_control = False
-        self.keyboard_target_angle = self.angle
+        self.keyboard_target_angle = 0
         # 添加缺失的 gesture_target_angle 初始化
         self.gesture_target_angle = 0
 
@@ -86,21 +86,22 @@ class Player(pygame.sprite.Sprite):
             raw_angle = math.degrees(math.atan2(-rel_y, rel_x)) % 360
             self.angle = (raw_angle + 90) % 360  # 补偿旋转偏移
         # 统一方向向量计算（保持原有逻辑）
-        angle_rad = math.radians(self.angle - 90)  # 修正角度偏移
+        angle_rad = math.radians(self.angle)  # 修正角度偏移
         self.shoot_direction = (math.cos(angle_rad), -math.sin(angle_rad))
-
-        if self.use_keyboard_control:
-            angle_rad = math.radians(self.angle)  # 修正角度偏移
-            self.shoot_direction = (-math.cos(angle_rad), math.sin(angle_rad))
 
         # 更新图像旋转
         self.image = pygame.transform.rotate(self.original_image, self.angle)
+
+        if self.use_keyboard_control:
+            self.image = pygame.transform.rotate(self.original_image, self.angle+90)
+            
         self.image.set_colorkey(BLACK)
         self.rect = self.image.get_rect(center=self.pos)
 
     def set_gesture_angle(self, angle):
         """切换到手势控制并设置角度"""
         self.use_voice_control = False
+        self.use_keyboard_control = False
         self.use_gesture_control = True
         self.gesture_target_angle = angle
 
@@ -114,17 +115,17 @@ class Player(pygame.sprite.Sprite):
     def set_voice_angle(self, angle):
         """切换到语音控制并设置角度"""
         self.use_gesture_control = False
+        self.use_keyboard_control = False
         self.use_voice_control = True
         self.voice_target_angle = angle
         # 键盘控制关闭
-        self.use_keyboard_control = False
 
     def set_keyboard_angle(self, angle):
         """切换到键盘控制并设置角度"""
-        self.use_keyboard_control = True
         self.use_voice_control = False
         self.use_gesture_control = False
-        self.keyboard_target_angle = angle 
+        self.use_keyboard_control = True
+        self.keyboard_target_angle = angle
 
     def get_shoot_pos(self):
         """获取射击起始位置(略微靠前)"""
