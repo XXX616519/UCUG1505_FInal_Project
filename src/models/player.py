@@ -94,7 +94,7 @@ class Player(pygame.sprite.Sprite):
 
         if self.use_keyboard_control:
             self.image = pygame.transform.rotate(self.original_image, self.angle+90)
-            
+
         self.image.set_colorkey(BLACK)
         self.rect = self.image.get_rect(center=self.pos)
 
