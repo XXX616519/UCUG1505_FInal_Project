@@ -45,6 +45,20 @@ def min_max_normalize(arr):
     return (arr - min_val) / (max_val - min_val)
 
 
+
+def display_selected_results(sample_df):
+    """Display the 6 randomly selected shooting details in a readable format"""
+    print("\n=== Selected 6 most amazing Shooting ===")
+    print("Time\t\tAngle\tColor (R,G,B)")
+    print("-" * 50)
+    for _, row in sample_df.iterrows():
+        time_str = row['time']
+        angle = row['angle']
+        color = row['color']
+        estimated = row['balls_eliminated']
+        print(f"{time_str}\t{angle:.2f}\t{color}\t{estimated}")
+
+
 def construct_matrix_from_csv(csv_file):
     # 1. 读取 CSV 文件（假设文件包含三列：time, angle, color）
     df = pd.read_csv(csv_file)
@@ -56,8 +70,13 @@ def construct_matrix_from_csv(csv_file):
     colors_parsed = df['color'].apply(parse_color)
     df[['R', 'G', 'B']] = pd.DataFrame(colors_parsed.tolist(), index=df.index)
     
-    # 4. 从所有数据中随机抽取 6 行，用于构造模型输入数据
-    sample_df = df.sample(n=6, random_state=42)  # 固定 random_state 保证可复现性
+    # # 4. 从所有数据中随机抽取 6 行，用于构造模型输入数据
+    # sample_df = df.sample(n=6, random_state=42)  # 固定 random_state 保证可复现性
+
+    df_sorted = df.sort_values(by='balls_eliminated', ascending=False)
+    sample_df = df_sorted.head(6)  # 选择 estimate 最大的前6行
+
+    display_selected_results(sample_df)
     
     # 只保留需要的 5 个特征：时间、角度、R、G、B
     data = sample_df[['time_float', 'angle', 'R', 'G', 'B']].to_numpy()  # 形状 (6, 5)
@@ -113,6 +132,10 @@ N = config.count
 
 
 
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+csv_path = os.path.join(project_root, "lucky","lucky.csv")
+image_path = os.path.join(project_root, "assets","background")
+
 class Simulation:
     def __init__(self):
         """Initialisation of Simulation environment"""
@@ -121,12 +144,12 @@ class Simulation:
         self.particles = np.random.randint(0, len(colours), size=N)  #the particle types - determines their nature towards each other
         #result_matrix = construct_matrix_from_csv(self.file)
         #self.attraction_matrix = np.zeros((len(colours), len(colours)))  #the attraction matrix - determines how one type interacts with another
-        self.attraction_matrix=construct_matrix_from_csv(r"D:\PDF\UCUG1505_FInal_Project\lucky\lucky.csv")
+        self.attraction_matrix=construct_matrix_from_csv(csv_path)
 
         self.grid = Grid(WIDTH, HEIGHT, 2 * config.influence)  #the grid - spacial partitioning technique to optimise detection of nearby particles
         self.running=True
         #self.file=r"D:\Vscode\python_code\UCUG1505_FInal_Project\lucky\lucky.csv"
-        self.background_images = self._load_background_images(r"D:\PDF\UCUG1505_FInal_Project\assets\background")  # 替换为你的图片文件夹路径
+        self.background_images = self._load_background_images(image_path)  # 替换为你的图片文件夹路径
         self.bg_image = self._select_random_image()
         self.noise_bg = self.generate_perlin_background()
         # 合成背景

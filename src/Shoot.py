@@ -8,12 +8,14 @@ from src.Sprites import ShootingBall
 from src.Constants import *
 from src.Special_Ball import Bonus
 
+
 class Shoot:
     def __init__(self, ball_generator, player, bonus_manager, score_manager):
         self.ball_generator = ball_generator
         self.player = player  # 接收整个 player 对象
         self.bonus_manager = bonus_manager
         self.score_manager = score_manager
+        self.balls_eliminated=0
 
         self.charged_ball = ShootingBall(random.choice(
             self.ball_generator.colors), self.player.get_shoot_pos())
@@ -33,7 +35,7 @@ class Shoot:
         #if not os.path.exists(self.csv_log_file):
         with open(self.csv_log_file, mode="w", newline="") as file:
             writer = csv.writer(file)
-            writer.writerow(["time", "angle", "color"])
+            writer.writerow(["time", "angle", "color","balls_eliminated"])
 
         # 加载声音和图片
         self.explosion_sound = pygame.mixer.Sound("assets/sounds/explosion.wav")
@@ -91,7 +93,8 @@ class Shoot:
                 "timestamp": shot_time,
                 "time_interval": time_interval,
                 "color": shooting_ball.color,
-                "angle": shot_angle
+                "angle": shot_angle,
+                "balls_eliminated":self.balls_eliminated
             }
             self.shot_log.append(log_entry)
             #print(f"记录射击日志 => 时间: {shot_time}, 时间间隔: {time_interval}s, 颜色: {shooting_ball.color}, 角度: {shot_angle}")
@@ -99,7 +102,7 @@ class Shoot:
             # 将本次射击的数据写入 CSV 文件（写入字段：时间、角度、颜色）
             with open(self.csv_log_file, mode='a', newline='') as file:
                 writer = csv.writer(file)
-                writer.writerow([shot_time.strftime("%Y-%m-%d %H:%M:%S.%f"), shot_angle, shooting_ball.color])
+                writer.writerow([shot_time.strftime("%Y-%m-%d %H:%M:%S.%f"), shot_angle, shooting_ball.color,self.balls_eliminated])
 
             # 发射后进行充能操作
             self.charged_ball = self.recharge()
@@ -140,6 +143,8 @@ class Shoot:
                     self.shooting_balls.remove(shooting_ball)
                     break
                 chain = self.collect_chain(ball, shooting_ball.color)
+                self.balls_eliminated = len(chain) if len(chain) > 1 else 0
+
                 if len(chain) > 1:
                     self.explosion_sound.play()
                     self.show_smoke(ball.rect.center)
