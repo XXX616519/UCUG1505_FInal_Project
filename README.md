@@ -140,6 +140,7 @@ Make sure you have the following installed:
 
    ```sh
    conda crete -n "your_name"
+   conda activate "your_name"
    conda install python=3.11
    pip install -r requirements.txt
    conda install -c conda-forge noise
